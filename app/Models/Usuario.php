@@ -42,7 +42,7 @@ class Usuario extends Model
 
 	protected $fillable = [
 		'nombre',
-		'correo',
+		'email',
 		'contrasena_hash',
 		'estado',
 		'id_rol',
