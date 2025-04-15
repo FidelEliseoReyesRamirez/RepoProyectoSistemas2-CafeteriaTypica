@@ -58,6 +58,11 @@ class LoginRequest extends FormRequest
             'email' => "Demasiados intentos fallidos, tu cuenta ha sido bloqueada temporalmente. Vuelve a intentarlo en {$minutos} minutos.",
         ]);
     }
+     // 🔄 Reestablecer bloqueos_hoy si es nuevo día (usando updated_at)
+     if ($user && $user->updated_at && $user->updated_at->lt(now()->startOfDay())) {
+        $user->bloqueos_hoy = 0;
+        $user->save();
+    }
 
     // 🟨 Intento de autenticación
     if (!Auth::attempt($this->only('email', 'password'))) {
