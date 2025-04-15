@@ -37,7 +37,8 @@ class Usuario extends Model
 
 	protected $casts = [
 		'id_rol' => 'int',
-		'eliminado' => 'bool'
+		'eliminado' => 'bool',
+		'bloqueado' => 'bool'
 	];
 
 	protected $fillable = [
@@ -46,6 +47,7 @@ class Usuario extends Model
 		'contrasena_hash',
 		'estado',
 		'id_rol',
+		'bloqueado',
 		'eliminado'
 	];
 

@@ -36,6 +36,7 @@ class Producto extends Model
 		'id_categoria' => 'int',
 		'precio' => 'float',
 		'disponibilidad' => 'bool',
+		'imagen' => 'string',
 		'eliminado' => 'bool'
 	];
 
@@ -45,6 +46,7 @@ class Producto extends Model
 		'id_categoria',
 		'precio',
 		'disponibilidad',
+		'imagen', 
 		'eliminado'
 	];
 
