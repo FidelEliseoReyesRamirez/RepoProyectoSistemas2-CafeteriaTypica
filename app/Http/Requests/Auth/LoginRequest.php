@@ -72,7 +72,7 @@ class LoginRequest extends FormRequest
                 ]);
 
                 // Revisar si debe aplicar bloqueo permanente
-                if (($user->bloqueos_hoy + 1) >= 3) {
+                if (($user->bloqueos_hoy ) >= 3) {
                     $user->update([
                         'bloqueado' => true,
                     ]);
