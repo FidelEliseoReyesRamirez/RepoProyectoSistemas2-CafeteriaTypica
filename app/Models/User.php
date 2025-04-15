@@ -17,13 +17,16 @@ class User extends Authenticatable
 
     protected $fillable = [
         'nombre',
-        'email', // <--- este debe coincidir con el nuevo campo de tu base
+        'email',
         'contrasena_hash',
         'id_rol',
         'estado',
     ];
 
     protected $hidden = ['contrasena_hash'];
+
+    // Esta línea desactiva completamente el uso del remember token
+    protected $rememberTokenName = null;
 
     public function getAuthPassword()
     {
@@ -35,9 +38,32 @@ class User extends Authenticatable
         return $this->belongsTo(Rol::class, 'id_rol', 'id_rol');
     }
 
-
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new ResetPasswordCustom($token));
+    }
+
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['contrasena_hash'] = bcrypt($value);
+    }
+    public function getRememberToken()
+    {
+        return null;
+    }
+
+    public function setRememberToken($value)
+    {
+        // Bloquear uso del campo
+    }
+
+    public function getRememberTokenName()
+    {
+        return null;
+    }
+    public function save(array $options = [])
+    {
+        unset($this->remember_token); 
+        return parent::save($options);
     }
 }
