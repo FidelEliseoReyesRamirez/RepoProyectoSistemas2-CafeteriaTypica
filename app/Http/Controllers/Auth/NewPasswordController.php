@@ -34,20 +34,28 @@ class NewPasswordController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Validar con nombre visible (password) aunque se guarde como contrasena_hash
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => [
+                'required',
+                'confirmed',
+                Rules\Password::min(8)
+                    ->letters()
+                    ->numbers()
+                    ->symbols(),
+            ],
+
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
+        // Laravel espera los campos con nombre password/password_confirmation en reset()
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) use ($request) {
+                // Actualizar usando el campo real de la base: contrasena_hash
                 $user->forceFill([
-                    'password' => Hash::make($request->password),
+                    'contrasena_hash' => Hash::make($request->password),
                     'remember_token' => Str::random(60),
                 ])->save();
 
@@ -55,10 +63,7 @@ class NewPasswordController extends Controller
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
-        if ($status == Password::PasswordReset) {
+        if ($status == Password::PASSWORD_RESET) {
             return to_route('login')->with('status', __($status));
         }
 

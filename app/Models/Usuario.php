@@ -36,20 +36,26 @@ class Usuario extends Model
 	public $timestamps = false;
 
 	protected $casts = [
-		'id_rol' => 'int',
-		'eliminado' => 'bool',
-		'bloqueado' => 'bool'
-	];
+        'id_rol' => 'int',
+        'eliminado' => 'bool',
+        'bloqueado' => 'bool',
+        'bloqueado_hasta' => 'datetime',
+        'bloqueos_hoy' => 'int',
+        'intentos_fallidos' => 'int',
+    ];
 
 	protected $fillable = [
-		'nombre',
-		'email',
-		'contrasena_hash',
-		'estado',
-		'id_rol',
-		'bloqueado',
-		'eliminado'
-	];
+        'nombre',
+        'email',
+        'contrasena_hash',
+        'estado',
+        'id_rol',
+        'bloqueado',
+        'bloqueado_hasta',
+        'bloqueos_hoy',
+        'intentos_fallidos',
+        'eliminado'
+    ];
 
 	public function rol()
 	{
