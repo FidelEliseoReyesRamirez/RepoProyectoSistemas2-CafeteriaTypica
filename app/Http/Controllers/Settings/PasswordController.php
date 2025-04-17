@@ -31,13 +31,33 @@ class PasswordController extends Controller
     {
         $validated = $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', Password::defaults(), 'confirmed'],
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->letters()
+                    ->numbers()
+                    ->symbols()
+                    ->uncompromised(), // valida que no esté filtrada en bases de datos públicas
+            ],
+        ], [
+            'current_password.required' => 'Debes ingresar tu contraseña actual.',
+            'current_password.current_password' => 'La contraseña actual no es correcta.',
+
+            'password.required' => 'Debes ingresar una nueva contraseña.',
+            'password.confirmed' => 'La confirmación no coincide con la nueva contraseña.',
+            'password.min' => 'La contraseña debe tener al menos :min caracteres.',
+            'password.letters' => 'La contraseña debe incluir al menos una letra.',
+            'password.numbers' => 'La contraseña debe incluir al menos un número.',
+            'password.symbols' => 'La contraseña debe incluir al menos un símbolo.',
+            'password.uncompromised' => 'Esta contraseña ha sido filtrada en una brecha de datos. Por favor elige otra.',
         ]);
 
+        // Guardamos en el campo personalizado
         $request->user()->update([
-            'password' => Hash::make($validated['password']),
+            'contrasena_hash' => Hash::make($validated['password']),
         ]);
 
-        return back();
+        return back()->with('status', 'Contraseña actualizada correctamente.');
     }
 }

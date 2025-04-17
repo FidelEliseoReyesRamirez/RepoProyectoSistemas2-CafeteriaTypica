@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
+
+
 class LoginRequest extends FormRequest
 {
     /**
@@ -38,19 +40,66 @@ class LoginRequest extends FormRequest
      * @throws \Illuminate\Validation\ValidationException
      */
     public function authenticate(): void
-    {
-        $this->ensureIsNotRateLimited();
+{
+    $user = \App\Models\Usuario::where('email', $this->email)->first();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+    // 🟥 BLOQUEO PERMANENTE
+    if ($user && $user->bloqueado) {
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            'email' => 'Tu cuenta ha sido bloqueada por motivos de seguridad. Contacta con el administrador para restablecer tu acceso.',
+        ]);
+    }
 
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
-            ]);
+    // 🕒 BLOQUEO TEMPORAL
+    if ($user && $user->bloqueado_hasta && now()->lt($user->bloqueado_hasta)) {
+        $minutos = number_format(now()->floatDiffInMinutes($user->bloqueado_hasta), 2);
+
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            'email' => "Demasiados intentos fallidos, tu cuenta ha sido bloqueada temporalmente. Vuelve a intentarlo en {$minutos} minutos.",
+        ]);
+    }
+     // 🔄 Reestablecer bloqueos_hoy si es nuevo día (usando updated_at)
+     if ($user && $user->updated_at && $user->updated_at->lt(now()->startOfDay())) {
+        $user->bloqueos_hoy = 0;
+        $user->save();
+    }
+
+    // 🟨 Intento de autenticación
+    if (!Auth::attempt($this->only('email', 'password'))) {
+        if ($user) {
+            $user->increment('intentos_fallidos');
+
+            if ($user->intentos_fallidos >= 5) {
+                $user->update([
+                    'bloqueado_hasta' => now()->addMinutes(15),
+                    'intentos_fallidos' => 0,
+                    'bloqueos_hoy' => $user->bloqueos_hoy + 1,
+                ]);
+
+                // Revisar si debe aplicar bloqueo permanente
+                if (($user->bloqueos_hoy ) >= 3) {
+                    $user->update([
+                        'bloqueado' => true,
+                    ]);
+                }
+            }
         }
 
-        RateLimiter::clear($this->throttleKey());
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            'email' => trans('auth.failed'),
+        ]);
     }
+
+    // 🟢 Autenticación exitosa → reiniciar contadores
+    if ($user) {
+        $user->update([
+            'intentos_fallidos' => 0,
+            'bloqueado_hasta' => null,
+        ]);
+    }
+}
+
+
 
     /**
      * Ensure the login request is not rate limited.
@@ -80,6 +129,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('email')) . '|' . $this->ip());
     }
 }
