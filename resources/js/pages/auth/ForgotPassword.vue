@@ -47,7 +47,7 @@ const submit = () => {
         <form @submit.prevent="submit" class="flex flex-col gap-6">
           <div class="grid gap-2">
             <Label for="email">Correo electrónico</Label>
-            <Input id="email" type="email" name="email" autocomplete="off" v-model="form.email" autofocus placeholder="correo@gmail.com"
+            <Input id="email" type="email" name="email" autocomplete="off" v-model="form.email" autofocus
                    class="rounded-md border border-border bg-background text-foreground" />
             <InputError :message="form.errors.email" />
           </div>

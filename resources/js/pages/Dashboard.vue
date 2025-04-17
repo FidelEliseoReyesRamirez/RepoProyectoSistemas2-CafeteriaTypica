@@ -8,6 +8,7 @@ import type { BreadcrumbItem } from '@/types';
 defineProps<{
   breadcrumbs?: BreadcrumbItem[];
 }>();
+
 const page = usePage() as any;
 const user = page.props.auth?.user as any;
 
@@ -25,14 +26,25 @@ onMounted(async () => {
     }
 });
 </script>
+
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mb-6 rounded-xl bg-gray-100 p-4 dark:bg-gray-800">
-            <template v-if="rolNombre">
-                <p class="text-xl font-semibold text-gray-800 dark:text-white">
-                    🎉 Bienvenido {{ rolNombre }} {{ user.nombre }}
-                </p>
-            </template>
+
+        <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
+            <div class="grid auto-rows-min gap-4 md:grid-cols-3">
+                <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+                    <PlaceholderPattern />
+                </div>
+                <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+                    <PlaceholderPattern />
+                </div>
+                <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
+                    <PlaceholderPattern />
+                </div>
+            </div>
+            <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 dark:border-sidebar-border md:min-h-min">
+                <PlaceholderPattern />
+            </div>
         </div>
     </AppLayout>
 </template>
