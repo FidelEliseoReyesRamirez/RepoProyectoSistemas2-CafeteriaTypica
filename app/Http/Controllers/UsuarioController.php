@@ -8,6 +8,8 @@ use App\Models\Rol;
 use App\Models\Usuario;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use App\Models\Auditorium;
+use Illuminate\Support\Facades\Auth;
 
 
 
@@ -59,7 +61,8 @@ class UsuarioController extends Controller
             'estado' => 'Activo',
             'eliminado' => 0
         ]);
-
+        $admin = Auth::user()->nombre;
+        $this->registrarAuditoria('Crear usuario', "$admin creó al usuario {$request->nombre} ({$request->email})");
         return redirect()->route('users.index')->with('success', 'Usuario creado correctamente.');
     }
 
@@ -82,6 +85,8 @@ class UsuarioController extends Controller
         }
 
         $usuario->update(['eliminado' => 1]);
+        $admin = Auth::user()->nombre;
+        $this->registrarAuditoria('Eliminar usuario', "$admin eliminó al usuario {$usuario->nombre}");
 
         return redirect()->route('users.index')->with('success', 'Usuario eliminado correctamente.');
     }
@@ -104,6 +109,9 @@ class UsuarioController extends Controller
         if ((int) $usuario->eliminado !== 1) {
             return back()->withErrors(['error' => 'Este usuario no está marcado como eliminado.']);
         }
+        $admin = Auth::user()->nombre;
+        $this->registrarAuditoria('Restaurar usuario', "$admin restauró al usuario {$usuario->nombre}");
+
         $usuario->update(['eliminado' => 0]);
     }
     public function edit($id)
@@ -146,10 +154,11 @@ class UsuarioController extends Controller
             'email' => $request->email,
             'id_rol' => $request->id_rol,
         ]);
-
+        $admin = Auth::user()->nombre;
+        $this->registrarAuditoria('Actualizar usuario', "$admin actualizó los datos del usuario {$usuario->nombre}");
         return redirect()->route('users.index')->with('success', 'Usuario actualizado correctamente.');
     }
- 
+
     public function desbloquear($id)
     {
         $usuario = Usuario::findOrFail($id);
@@ -159,7 +168,19 @@ class UsuarioController extends Controller
             'intentos_fallidos' => 0,
             'bloqueos_hoy' => 0,
         ]);
+        $admin = Auth::user()->nombre;
+        $this->registrarAuditoria('Desbloquear usuario', "$admin desbloqueó al usuario {$usuario->nombre}");
 
         return redirect()->route('users.index')->with('success', 'Usuario desbloqueado correctamente.');
+    }
+    private function registrarAuditoria(string $accion, string $descripcion): void
+    {
+        Auditorium::create([
+            'id_usuario' => Auth::id(),
+            'accion' => $accion,
+            'descripcion' => $descripcion,
+            'fecha_hora' => now(),
+            'eliminado' => 0,
+        ]);
     }
 }
