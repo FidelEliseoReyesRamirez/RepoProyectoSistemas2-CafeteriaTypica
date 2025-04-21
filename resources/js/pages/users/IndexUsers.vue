@@ -49,17 +49,26 @@ const desbloquearUsuario = (id: number) => {
 };
 
 const filtro = ref('');
-
+const soloBloqueados = ref(false);
 const usuariosFiltrados = computed(() => {
-    if (!filtro.value) return props.usuarios;
+    let resultado = props.usuarios;
 
-    const termino = filtro.value.toLowerCase();
-    return props.usuarios.filter(u =>
-        u.nombre.toLowerCase().includes(termino) ||
-        u.email.toLowerCase().includes(termino) ||
-        (u.rol?.nombre || '').toLowerCase().includes(termino)
-    );
+    if (filtro.value) {
+        const termino = filtro.value.toLowerCase();
+        resultado = resultado.filter(u =>
+            u.nombre.toLowerCase().includes(termino) ||
+            u.email.toLowerCase().includes(termino) ||
+            (u.rol?.nombre || '').toLowerCase().includes(termino)
+        );
+    }
+
+    if (soloBloqueados.value) {
+        resultado = resultado.filter(u => u.bloqueado);
+    }
+
+    return resultado;
 });
+
 
 </script>
 <template>
@@ -76,6 +85,13 @@ const usuariosFiltrados = computed(() => {
 
                     <input v-model="filtro" type="text" placeholder="Buscar por nombre, email o rol..."
                         class="w-full sm:max-w-sm border border-[#c5a880] dark:border-[#8c5c3b] rounded px-3 py-2 text-sm bg-white dark:bg-[#1d1b16] text-[#4b3621] dark:text-white" />
+                    <div class="flex items-center gap-2 mt-2">
+                        <input id="soloBloqueados" type="checkbox" v-model="soloBloqueados"
+                            class="form-checkbox h-4 w-4 text-[#a47148] border-[#c5a880] dark:border-[#8c5c3b] bg-white dark:bg-[#1d1b16]" />
+                        <label for="soloBloqueados" class="text-sm text-[#4b3621] dark:text-white">
+                            Solo bloqueados
+                        </label>
+                    </div>
                 </div>
 
                 <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
