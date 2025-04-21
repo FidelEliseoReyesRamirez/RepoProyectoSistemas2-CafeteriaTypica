@@ -2,7 +2,7 @@
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { PageProps } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{ usuarios: any[] }>();
 const page = usePage<PageProps>();
@@ -48,6 +48,18 @@ const desbloquearUsuario = (id: number) => {
     });
 };
 
+const filtro = ref('');
+
+const usuariosFiltrados = computed(() => {
+    if (!filtro.value) return props.usuarios;
+
+    const termino = filtro.value.toLowerCase();
+    return props.usuarios.filter(u =>
+        u.nombre.toLowerCase().includes(termino) ||
+        u.email.toLowerCase().includes(termino) ||
+        (u.rol?.nombre || '').toLowerCase().includes(termino)
+    );
+});
 
 </script>
 <template>
@@ -57,9 +69,15 @@ const desbloquearUsuario = (id: number) => {
 
         <div class="p-3 sm:p-6 text-[#4b3621] dark:text-white">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4 mb-4">
-                <h1 class="text-lg sm:text-2xl font-bold text-[#593E25] dark:text-[#d9a679]">
-                    Listado de Usuarios
-                </h1>
+                <div class="w-full">
+                    <h1 class="text-lg sm:text-2xl font-bold text-[#593E25] dark:text-[#d9a679] mb-2">
+                        Listado de Usuarios
+                    </h1>
+
+                    <input v-model="filtro" type="text" placeholder="Buscar por nombre, email o rol..."
+                        class="w-full sm:max-w-sm border border-[#c5a880] dark:border-[#8c5c3b] rounded px-3 py-2 text-sm bg-white dark:bg-[#1d1b16] text-[#4b3621] dark:text-white" />
+                </div>
+
                 <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                     <Link href="/users/deleted"
                         class="bg-[#6b4f3c] hover:bg-[#8c5c3b] text-white text-xs sm:text-sm px-3 py-2 rounded shadow text-center">
@@ -86,7 +104,7 @@ const desbloquearUsuario = (id: number) => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(usuario, i) in usuarios" :key="usuario.id_usuario"
+                        <tr v-for="(usuario, i) in usuariosFiltrados" :key="usuario.id_usuario"
                             class="border-t dark:border-neutral-700">
                             <td class="px-2 py-2">{{ i + 1 }}</td>
                             <td class="px-2 py-2">{{ usuario.nombre }}</td>
