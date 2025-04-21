@@ -39,5 +39,6 @@ Route::middleware(['auth', 'verified', 'is_admin'])->group(function () {
     Route::put('/users/{id}/restore', [UsuarioController::class, 'restaurar'])->name('users.restore');
     Route::get('/users/{id}/edit', [UsuarioController::class, 'edit'])->name('users.edit');
     Route::put('/users/{id}', [UsuarioController::class, 'update'])->name('users.update');
+    Route::put('/users/{id}/unblock', [UsuarioController::class, 'desbloquear'])->name('users.unblock');
 });
 

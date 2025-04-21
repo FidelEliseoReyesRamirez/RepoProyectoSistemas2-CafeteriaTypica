@@ -15,11 +15,15 @@ class UsuarioController extends Controller
 {
     public function index()
     {
-        $usuarios = Usuario::with('rol')->where('eliminado', 0)->get();
+        $usuarios = Usuario::with('rol')
+            ->where('eliminado', 0)
+            ->get();
+
         return Inertia::render('users/IndexUsers', [
-            'usuarios' => $usuarios
+            'usuarios' => $usuarios,
         ]);
     }
+
 
     public function create()
     {
@@ -144,5 +148,18 @@ class UsuarioController extends Controller
         ]);
 
         return redirect()->route('users.index')->with('success', 'Usuario actualizado correctamente.');
+    }
+ 
+    public function desbloquear($id)
+    {
+        $usuario = Usuario::findOrFail($id);
+        $usuario->update([
+            'bloqueado' => false,
+            'bloqueado_hasta' => null,
+            'intentos_fallidos' => 0,
+            'bloqueos_hoy' => 0,
+        ]);
+
+        return redirect()->route('users.index')->with('success', 'Usuario desbloqueado correctamente.');
     }
 }

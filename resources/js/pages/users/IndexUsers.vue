@@ -41,9 +41,18 @@ const eliminarUsuario = () => {
         });
     }
 };
+const desbloquearUsuario = (id: number) => {
+    router.put(`/users/${id}/unblock`, {}, {
+        onSuccess: () => router.reload(),
+        onError: (errors) => console.error('Error al desbloquear:', errors),
+    });
+};
+
+
 </script>
 <template>
     <AppLayout>
+
         <Head title="Users" />
 
         <div class="p-3 sm:p-6 text-[#4b3621] dark:text-white">
@@ -54,16 +63,17 @@ const eliminarUsuario = () => {
                 <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                     <Link href="/users/deleted"
                         class="bg-[#6b4f3c] hover:bg-[#8c5c3b] text-white text-xs sm:text-sm px-3 py-2 rounded shadow text-center">
-                        Ver eliminados
+                    Ver eliminados
                     </Link>
                     <Link href="/users/create"
                         class="bg-[#a47148] hover:bg-[#8c5c3b] text-white text-xs sm:text-sm px-3 py-2 rounded shadow text-center">
-                        Crear Usuario
+                    Crear Usuario
                     </Link>
                 </div>
             </div>
 
-            <div class="overflow-x-auto rounded-xl border border-[#c5a880] dark:border-[#8c5c3b] bg-white dark:bg-[#1d1b16]">
+            <div
+                class="overflow-x-auto rounded-xl border border-[#c5a880] dark:border-[#8c5c3b] bg-white dark:bg-[#1d1b16]">
                 <!-- Escritorio -->
                 <table class="min-w-full text-xs sm:text-sm hidden sm:table">
                     <thead class="bg-neutral-100 dark:bg-neutral-800">
@@ -85,12 +95,17 @@ const eliminarUsuario = () => {
                             <td class="px-2 py-2 flex flex-wrap gap-2">
                                 <Link :href="`/users/${usuario.id_usuario}/edit`"
                                     class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-1 px-2 rounded">
-                                    Editar
+                                Editar
                                 </Link>
                                 <button @click="confirmEliminar(usuario.id_usuario, usuario.nombre)"
                                     class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-1 px-2 rounded">
                                     Eliminar
                                 </button>
+                                <button v-if="usuario.bloqueado" @click="desbloquearUsuario(usuario.id_usuario)"
+                                    class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-1 px-2 rounded">
+                                    Desbloquear
+                                </button>
+
                             </td>
                         </tr>
                     </tbody>
@@ -106,7 +121,7 @@ const eliminarUsuario = () => {
                         <div class="mt-2 flex flex-wrap gap-2">
                             <Link :href="`/users/${usuario.id_usuario}/edit`"
                                 class="bg-blue-600 hover:bg-blue-700 text-white text-xs py-1 px-2 rounded">
-                                Editar
+                            Editar
                             </Link>
                             <button @click="confirmEliminar(usuario.id_usuario, usuario.nombre)"
                                 class="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-2 rounded">
@@ -121,12 +136,13 @@ const eliminarUsuario = () => {
         <!-- Modal Confirmación -->
         <div v-if="showModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-2 sm:p-4">
             <div class="bg-white dark:bg-[#2c211b] p-4 sm:p-6 rounded-lg w-full max-w-sm shadow-xl text-xs sm:text-sm">
-                <h2 class="text-base sm:text-lg font-bold mb-3 text-[#593E25] dark:text-[#d9a679]">Confirmar eliminación</h2>
-                <p class="mb-4">¿Estás seguro que deseas eliminar al usuario <strong>{{ selectedUserName }}</strong>?</p>
+                <h2 class="text-base sm:text-lg font-bold mb-3 text-[#593E25] dark:text-[#d9a679]">Confirmar eliminación
+                </h2>
+                <p class="mb-4">¿Estás seguro que deseas eliminar al usuario <strong>{{ selectedUserName }}</strong>?
+                </p>
                 <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
                     <button @click="cancelarEliminar" class="px-3 py-1.5 border rounded">Cancelar</button>
-                    <button @click="eliminarUsuario"
-                        class="bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700">
+                    <button @click="eliminarUsuario" class="bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700">
                         Eliminar
                     </button>
                 </div>
