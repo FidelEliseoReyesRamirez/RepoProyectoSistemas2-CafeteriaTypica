@@ -12,8 +12,8 @@ Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';
 
 use Illuminate\Support\Facades\DB;
 
@@ -42,3 +42,17 @@ Route::middleware(['auth', 'verified', 'is_admin'])->group(function () {
     Route::put('/users/{id}/unblock', [UsuarioController::class, 'desbloquear'])->name('users.unblock');
 });
 
+//PRODUCTOS
+use App\Http\Controllers\ProductoController;
+
+Route::middleware(['auth', 'verified', 'can_manage_productos'])->group(function () {
+    Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
+    Route::get('/productos/create', [ProductoController::class, 'create'])->name('productos.create');
+    Route::post('/productos', [ProductoController::class, 'store'])->name('productos.store');
+    Route::get('/productos/{producto}/edit', [ProductoController::class, 'edit'])->name('productos.edit');
+    Route::put('/productos/{producto}', [ProductoController::class, 'update'])->name('productos.update');
+    Route::delete('/productos/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
+    Route::put('/productos/{producto}/toggle-disponibilidad', [ProductoController::class, 'toggleDisponibilidad'])->name('productos.toggle-disponibilidad');
+    Route::put('/productos/{producto}/restore', [ProductoController::class, 'restore'])->name('productos.restore');
+    Route::get('/productos/deleted', [ProductoController::class, 'deleted'])->name('productos.deleted');
+});

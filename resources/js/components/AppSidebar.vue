@@ -16,10 +16,10 @@ import { LayoutGrid, UserPlus } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import { usePage } from '@inertiajs/vue3';
 import type { PageProps } from '@/types';
+import { Coffee, Utensils } from 'lucide-vue-next';
 
 const page = usePage<PageProps>();
 const authUser = page.props.auth.user;
-
 const mainNavItems: NavItem[] = [
   {
     title: 'Dashboard',
@@ -32,7 +32,13 @@ const mainNavItems: NavItem[] = [
     icon: UserPlus,
   }] : []),
 
+  ...(authUser && [1, 3].includes(authUser.id_rol) ? [{
+    title: 'Productos',
+    href: route('productos.index'),
+    icon: Utensils, 
+  }] : []),
 ];
+
 </script>
 
 <template>

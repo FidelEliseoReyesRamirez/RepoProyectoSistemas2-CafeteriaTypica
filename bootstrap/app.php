@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'no_direct_access' => \App\Http\Middleware\NoDirectAccess::class,
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
+            'can_manage_productos' => \App\Http\Middleware\CanManageProductos::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
