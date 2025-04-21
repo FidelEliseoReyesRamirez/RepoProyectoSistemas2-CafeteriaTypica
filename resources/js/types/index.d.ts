@@ -23,6 +23,7 @@ export interface User {
   email_verified_at: string | null;
   created_at: string;
   updated_at: string;
+  id_rol: number;
 }
 
 export interface Auth {

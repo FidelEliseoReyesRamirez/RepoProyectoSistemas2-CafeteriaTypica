@@ -14,6 +14,11 @@ import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { LayoutGrid, UserPlus } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
+import { usePage } from '@inertiajs/vue3';
+import type { PageProps } from '@/types';
+
+const page = usePage<PageProps>();
+const authUser = page.props.auth.user;
 
 const mainNavItems: NavItem[] = [
   {
@@ -21,12 +26,15 @@ const mainNavItems: NavItem[] = [
     href: '/dashboard',
     icon: LayoutGrid,
   },
-  {
+  ...(authUser && authUser.id_rol === 1 ? [{
     title: 'Usuarios',
     href: route('users.index'),
     icon: UserPlus,
-  },
+  }] : []),
+
 ];
+
+
 </script>
 
 <template>
@@ -36,7 +44,7 @@ const mainNavItems: NavItem[] = [
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>
             <Link :href="route('dashboard')">
-              <AppLogo />
+            <AppLogo />
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
