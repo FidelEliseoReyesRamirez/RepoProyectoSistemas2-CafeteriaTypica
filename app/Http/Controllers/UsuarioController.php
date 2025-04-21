@@ -82,15 +82,15 @@ class UsuarioController extends Controller
         return redirect()->route('users.index')->with('success', 'Usuario eliminado correctamente.');
     }
     public function deleted()
-{
-    $usuarios = Usuario::with('rol')
-        ->where('eliminado', 1)
-        ->get();
+    {
+        $usuarios = Usuario::with('rol')
+            ->where('eliminado', 1)
+            ->get();
 
-    return Inertia::render('users/DeletedUsers', [
-        'usuarios' => $usuarios,
-    ]);
-}
+        return Inertia::render('users/DeletedUsers', [
+            'usuarios' => $usuarios,
+        ]);
+    }
 
     public function restaurar($id)
     {
@@ -101,41 +101,48 @@ class UsuarioController extends Controller
             return back()->withErrors(['error' => 'Este usuario no está marcado como eliminado.']);
         }
         $usuario->update(['eliminado' => 0]);
-
     }
     public function edit($id)
-{
-    $usuario = Usuario::findOrFail($id);
-    $roles = Rol::all();
+    {
+        $usuario = Usuario::with('rol')->find($id);
 
-    return Inertia::render('users/EditUsers', [
-        'usuario' => $usuario,
-        'roles' => $roles
-    ]);
-}
+        // Si no se encuentra el usuario, redirigir atrás o a listado
+        if (!$usuario) {
+            return redirect()->route('users.index')->withErrors([
+                'usuario' => 'El usuario no existe.',
+            ]);
+        }
 
-public function update(Request $request, $id)
-{
-    $usuario = Usuario::findOrFail($id);
+        $roles = Rol::all();
 
-    $request->validate([
-        'nombre' => ['required', 'regex:/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/'],
-        'email' => [
-            'required',
-            'email',
-            'regex:/@gmail\.com$/',
-            'unique:usuario,email,' . $id . ',id_usuario'
-        ],
-        'id_rol' => ['required', 'exists:rol,id_rol']
-    ]);
+        return Inertia::render('users/EditUsers', [
+            'usuario' => $usuario,
+            'roles' => $roles,
+        ]);
+    }
 
-    $usuario->update([
-        'nombre' => $request->nombre,
-        'email' => $request->email,
-        'id_rol' => $request->id_rol,
-    ]);
 
-    return redirect()->route('users.index')->with('success', 'Usuario actualizado correctamente.');
-}
+    public function update(Request $request, $id)
+    {
+        $usuario = Usuario::findOrFail($id);
 
+        $request->validate([
+            'nombre' => ['required', 'regex:/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/'],
+            'email' => [
+                'required',
+                'email',
+                'regex:/@gmail\.com$/',
+                'unique:usuario,email,' . $id . ',id_usuario'
+            ],
+            'id_rol' => ['required', 'exists:rol,id_rol']
+        ]);
+
+        $usuario->update([
+            'nombre' => $request->nombre,
+            'email' => $request->email,
+            'id_rol' => $request->id_rol,
+        ]);
+
+        return redirect()->route('users.index')->with('success', 'Usuario actualizado correctamente.');
+    }
 }

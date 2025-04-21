@@ -27,15 +27,17 @@ Route::get('/rol/{id}', function ($id) {
 });
 
 
-
-//CRUD USUARIOS
+//USUARIOS
 use App\Http\Controllers\UsuarioController;
 
-Route::get('/users', [UsuarioController::class, 'index'])->name('users.index');
-Route::get('/users/create', [UsuarioController::class, 'create'])->name('users.create');
-Route::post('/users', [UsuarioController::class, 'store'])->name('users.store');
-Route::delete('/users/{id}', [UsuarioController::class, 'destroy'])->name('users.destroy');
-Route::get('/users/deleted', [UsuarioController::class, 'deleted'])->name('users.deleted');
-Route::put('/users/{id}/restore', [UsuarioController::class, 'restaurar'])->name('users.restore');
-Route::get('/users/{id}/edit', [UsuarioController::class, 'edit'])->name('users.edit');
-Route::put('/users/{id}', [UsuarioController::class, 'update'])->name('users.update');
+Route::middleware(['auth', 'verified', 'is_admin'])->group(function () {
+    Route::get('/users', [UsuarioController::class, 'index'])->name('users.index');
+    Route::get('/users/create', [UsuarioController::class, 'create'])->name('users.create');
+    Route::post('/users', [UsuarioController::class, 'store'])->name('users.store');
+    Route::delete('/users/{id}', [UsuarioController::class, 'destroy'])->name('users.destroy');
+    Route::get('/users/deleted', [UsuarioController::class, 'deleted'])->name('users.deleted');
+    Route::put('/users/{id}/restore', [UsuarioController::class, 'restaurar'])->name('users.restore');
+    Route::get('/users/{id}/edit', [UsuarioController::class, 'edit'])->name('users.edit');
+    Route::put('/users/{id}', [UsuarioController::class, 'update'])->name('users.update');
+});
+

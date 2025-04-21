@@ -27,8 +27,14 @@ use Illuminate\Database\Eloquent\Model;
  * @property Collection|Pedido[] $pedidos
  * @property Collection|Prediccion[] $prediccions
  *
+ * @property bool $bloqueado
+ * @property \Carbon\Carbon|null $bloqueado_hasta
+ * @property int $bloqueos_hoy
+ * @property int $intentos_fallidos
+ * @property \Carbon\Carbon|null $updated_at
  * @package App\Models
  */
+
 class Usuario extends Model
 {
 	protected $table = 'usuario';
