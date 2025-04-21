@@ -127,6 +127,10 @@ const desbloquearUsuario = (id: number) => {
                                 class="bg-red-600 hover:bg-red-700 text-white text-xs py-1 px-2 rounded">
                                 Eliminar
                             </button>
+                            <button v-if="usuario.bloqueado" @click="desbloquearUsuario(usuario.id_usuario)"
+                                class="bg-yellow-500 hover:bg-yellow-600 text-white text-xs py-1 px-2 rounded">
+                                Desbloquear
+                            </button>
                         </div>
                     </div>
                 </div>
