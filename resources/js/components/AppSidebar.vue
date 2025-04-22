@@ -37,7 +37,14 @@ const mainNavItems: NavItem[] = [
     href: route('productos.index'),
     icon: Utensils, 
   }] : []),
+
+  ...(authUser && [1, 2].includes(authUser.id_rol) ? [{
+    title: 'Ordenar',
+    href: route('order.index'),
+    icon: Coffee,
+  }] : []),
 ];
+
 
 </script>
 

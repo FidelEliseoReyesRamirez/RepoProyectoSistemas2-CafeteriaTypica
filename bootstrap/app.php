@@ -32,7 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'no_direct_access' => \App\Http\Middleware\NoDirectAccess::class,
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
             'can_manage_productos' => \App\Http\Middleware\CanManageProductos::class,
+            'is_mesero_or_admin' => \App\Http\Middleware\IsMeseroOrAdmin::class,
         ]);
+        
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // 🟥 Error 404: Not Found

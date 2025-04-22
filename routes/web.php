@@ -56,3 +56,12 @@ Route::middleware(['auth', 'verified', 'can_manage_productos'])->group(function 
     Route::put('/productos/{producto}/restore', [ProductoController::class, 'restore'])->name('productos.restore');
     Route::get('/productos/deleted', [ProductoController::class, 'deleted'])->name('productos.deleted');
 });
+
+
+//PEDIDOS
+use App\Http\Controllers\PedidoController;
+
+Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
+    Route::get('/order', [PedidoController::class, 'crear'])->name('order.index');
+    Route::post('/order', [PedidoController::class, 'guardar'])->name('order.store');
+});
