@@ -43,7 +43,7 @@ const submit = () => {
 <template>
   <div
     class="relative min-h-screen bg-cover bg-center flex items-center justify-center px-4 sm:px-6"
-    style="background-image: url('https://scontent.flpb1-1.fna.fbcdn.net/v/t39.30808-6/488271234_1070346118454390_8302317665730998860_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=cc71e4&_nc_ohc=1OZfSj_MM9AQ7kNvwE8HSz_&_nc_oc=AdmSQ6vn9jOUGbuJhB5LGpPINzSWtMY1N5nF8vvwRsXbumECKRB4qGE8XtGguzjfMJ8&_nc_zt=23&_nc_ht=scontent.flpb1-1.fna&_nc_gid=MKwj4d8Nv1KCQX-Bz-3n_A&oh=00_AfFP1p3dHLUOBZQ1LCzwUhNU6TN8fL5kfMNLDt8Szyk6Uw&oe=68037FC2');"
+    style="background-image: url('https://emprendimientosbolivia.com/wp-content/uploads/2024/01/SG_9707.jpg');"
   >
     <div class="absolute inset-0 bg-black/50 z-0"></div>
 
