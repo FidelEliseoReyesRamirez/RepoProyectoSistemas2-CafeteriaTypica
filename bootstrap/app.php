@@ -7,6 +7,12 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 
+
+use Inertia\Inertia;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -21,7 +27,30 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        $middleware->alias([
+            'no_direct_access' => \App\Http\Middleware\NoDirectAccess::class,
+            'is_admin' => \App\Http\Middleware\IsAdmin::class,
+            'can_manage_productos' => \App\Http\Middleware\CanManageProductos::class,
+            'is_mesero_or_admin' => \App\Http\Middleware\IsMeseroOrAdmin::class,
+        ]);
+        
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
-    })->create();
+        // 🟥 Error 404: Not Found
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if ($request->inertia()) {
+                return Inertia::location($request->headers->get('referer') ?? url()->previous() ?? '/');
+            }
+            return redirect()->back();
+        });
+
+        // 🟨 Error 405: Method Not Allowed
+        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
+            if ($request->inertia()) {
+                return Inertia::location($request->headers->get('referer') ?? url()->previous() ?? '/');
+            }
+            return redirect()->back();
+        });
+    })
+    ->create();

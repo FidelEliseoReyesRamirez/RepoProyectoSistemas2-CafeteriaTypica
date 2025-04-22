@@ -2,47 +2,69 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\Rol;
+use App\Notifications\ResetPasswordCustom;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    protected $table = 'usuario';
+    protected $primaryKey = 'id_usuario';
+    public $timestamps = false;
+    
+
     protected $fillable = [
-        'name',
+        'nombre',
         'email',
-        'password',
+        'contrasena_hash',
+        'id_rol',
+        'estado',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['contrasena_hash'];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    // Esta línea desactiva completamente el uso del remember token
+    protected $rememberTokenName = null;
+
+    public function getAuthPassword()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->contrasena_hash;
+    }
+
+    public function rol()
+    {
+        return $this->belongsTo(Rol::class, 'id_rol', 'id_rol');
+    }
+
+    public function sendPasswordResetNotification($token)
+    {
+        $this->notify(new ResetPasswordCustom($token));
+    }
+
+    public function setPasswordAttribute($value)
+    {
+        $this->attributes['contrasena_hash'] = bcrypt($value);
+    }
+    public function getRememberToken()
+    {
+        return null;
+    }
+
+    public function setRememberToken($value)
+    {
+        // Bloquear uso del campo
+    }
+
+    public function getRememberTokenName()
+    {
+        return null;
+    }
+    public function save(array $options = [])
+    {
+        unset($this->remember_token); 
+        return parent::save($options);
     }
 }

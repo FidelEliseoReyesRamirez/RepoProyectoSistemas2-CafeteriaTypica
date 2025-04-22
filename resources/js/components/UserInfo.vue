@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useInitials } from '@/composables/useInitials';
 import type { User } from '@/types';
-import { computed } from 'vue';
 
 interface Props {
     user: User;
@@ -12,23 +9,17 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     showEmail: false,
 });
-
-const { getInitials } = useInitials();
-
-// Compute whether we should show the avatar image
-const showAvatar = computed(() => props.user.avatar && props.user.avatar !== '');
 </script>
 
 <template>
-    <Avatar class="h-8 w-8 overflow-hidden rounded-lg">
-        <AvatarImage v-if="showAvatar" :src="user.avatar" :alt="user.name" />
-        <AvatarFallback class="rounded-lg text-black dark:text-white">
-            {{ getInitials(user.name) }}
-        </AvatarFallback>
-    </Avatar>
+    <div class="flex items-center gap-2 text-sm text-foreground">
+        <!-- Ícono de usuario SVG -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+            class="h-7 w-7 fill-[#593E25] dark:fill-[#D9A679]">
+            <path d="M256,256A128,128,0,1,0,128,128,128,128,0,0,0,256,256Zm89.6,32H338.4a174.6,174.6,0,0,1-164.8,0H166.4A118.4,118.4,0,0,0,48,406.4V432a48,48,0,0,0,48,48H416a48,48,0,0,0,48-48V406.4A118.4,118.4,0,0,0,345.6,288Z"/>
+        </svg>
 
-    <div class="grid flex-1 text-left text-sm leading-tight">
-        <span class="truncate font-medium">{{ user.name }}</span>
-        <span v-if="showEmail" class="truncate text-xs text-muted-foreground">{{ user.email }}</span>
+        <!-- Nombre del usuario -->
+        <span class="font-medium truncate">{{ props.user?.nombre ?? 'Desconocido' }}</span>
     </div>
 </template>
