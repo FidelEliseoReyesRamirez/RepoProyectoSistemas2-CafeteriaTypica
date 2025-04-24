@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import InputError from '@/components/InputError.vue';
 import type { PageProps } from '@/types';
 import { ref } from 'vue';
+import { Link } from '@inertiajs/vue3';
 
 interface Categoria {
     id_categoria: number;
@@ -202,9 +203,10 @@ const corregirCantidad = () => {
 
                 <div class="flex justify-end gap-3">
                     <Link href="/productos"
-                        class="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded shadow text-sm">
+                        class="px-4 py-2 rounded border border-gray-400 text-sm text-[#4b3621] dark:text-white dark:border-[#8c5c3b] hover:bg-gray-200 dark:hover:bg-[#2c211b]">
                     Cancelar
                     </Link>
+
 
                     <Button type="submit" class="bg-[#a47148] hover:bg-[#8c5c3b] text-white px-6 py-2 rounded shadow">
                         Actualizar producto
