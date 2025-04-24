@@ -55,6 +55,8 @@ Route::middleware(['auth', 'verified', 'can_manage_productos'])->group(function 
     Route::put('/productos/{producto}/toggle-disponibilidad', [ProductoController::class, 'toggleDisponibilidad'])->name('productos.toggle-disponibilidad');
     Route::put('/productos/{producto}/restore', [ProductoController::class, 'restore'])->name('productos.restore');
     Route::get('/productos/deleted', [ProductoController::class, 'deleted'])->name('productos.deleted');
+    Route::put('/productos/{id}/actualizar-cantidad', [ProductoController::class, 'actualizarCantidad']);
+
 });
 
 

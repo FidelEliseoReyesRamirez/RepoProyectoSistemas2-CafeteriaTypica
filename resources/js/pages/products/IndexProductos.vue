@@ -71,11 +71,20 @@ const productosFiltrados = computed(() => {
     });
 });
 
+const actualizarCantidadDisponible = (id: number, cantidad: number) => {
+    if (cantidad >= 0) {
+        router.put(`/productos/${id}/actualizar-cantidad`, { cantidad }, {
+            preserveScroll: true,
+            onError: (err) => console.error(err),
+        });
+    }
+};
 
 </script>
 
 <template>
     <AppLayout>
+
         <Head title="Productos" />
 
         <div class="p-3 sm:p-6 text-[#4b3621] dark:text-white w-full max-w-full overflow-x-hidden">
@@ -117,11 +126,11 @@ const productosFiltrados = computed(() => {
             <div class="w-full flex flex-wrap justify-start sm:justify-end gap-2 mb-6">
                 <Link href="/productos/deleted"
                     class="bg-[#6b4f3c] hover:bg-[#8c5c3b] text-white text-xs px-3 py-2 rounded shadow">
-                    Ver eliminados
+                Ver eliminados
                 </Link>
                 <Link href="/productos/create"
                     class="bg-[#a47148] hover:bg-[#8c5c3b] text-white text-xs px-3 py-2 rounded shadow">
-                    Crear Producto
+                Crear Producto
                 </Link>
             </div>
 
@@ -130,38 +139,83 @@ const productosFiltrados = computed(() => {
             <div v-for="(productos, categoria) in productosPorCategoria" :key="categoria" class="mb-10">
                 <h2 class="text-lg font-semibold mb-4 text-[#593E25] dark:text-[#d9a679]">{{ categoria }}</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    <div v-for="producto in productos" :key="producto.id_producto" class="relative perspective"
-                        @click="toggleFlip(producto.id_producto)">
-                        <div
-                            :class="['transition-transform duration-500 transform-style-preserve-3d', 'w-full h-64 rounded-xl shadow-lg cursor-pointer relative', flippedCards.includes(producto.id_producto) ? 'rotate-y-180' : '']">
+                    <div v-for="producto in productos" :key="producto.id_producto" class="relative perspective">
+
+                        <div :class="['transition-transform duration-500 transform-style-preserve-3d', 'w-full h-auto min-h-[270px] sm:min-h-[280px]'
+                            , flippedCards.includes(producto.id_producto) ? 'rotate-y-180' : '']">
 
                             <!-- Frente -->
                             <div
                                 class="absolute w-full h-full backface-hidden bg-white dark:bg-[#1d1b16] border border-[#c5a880] dark:border-[#8c5c3b] rounded-xl overflow-hidden p-3 flex flex-col justify-between">
+
+                                <!-- Imagen + Info -->
                                 <div>
                                     <img :src="producto.imagen" alt="imagen"
-                                        class="w-full h-32 object-cover rounded-md mb-2">
-                                    <h3 class="text-sm font-bold truncate">{{ producto.nombre }}</h3>
-                                    <p class="text-xs text-gray-600 dark:text-gray-300">{{ producto.precio.toFixed(2) }}
-                                        Bs</p>
+                                        class="w-full h-36 object-cover rounded-md mb-3">
+                                    <!-- Nombre + Stock en línea -->
+                                    <div class="flex justify-between items-center mb-1">
+                                        <h3 class="text-sm font-bold truncate">{{ producto.nombre }}</h3>
+                                        <div class="flex items-center gap-1">
+                                            <label
+                                                class="text-[11px] font-medium text-gray-600 dark:text-gray-300">Stock:</label>
+                                            <input type="number" :value="producto.cantidad_disponible" @input="(e: any) => {
+                                                let val = parseInt(e.target.value);
+                                                if (isNaN(val) || val < 0) {
+                                                    val = 0;
+                                                } else if (val > 1000) {
+                                                    val = 1000;
+                                                    e.target.value = 1000; // actualiza visualmente también
+                                                }
+                                                actualizarCantidadDisponible(producto.id_producto, val);
+                                            }" @keydown="(e) => {
+                                                const invalid = ['e', 'E', '-', '+'];
+                                                if (invalid.includes(e.key)) e.preventDefault();
+                                            }" min="0" class="w-14 text-xs text-center border border-[#c5a880] dark:border-[#8c5c3b] bg-white dark:bg-[#1d1b16] rounded px-1 py-0.5" />
+                                        </div>
+                                    </div>
+
+                                    <p class="text-sm font-medium mt-0.5">{{ producto.precio.toFixed(2) }} Bs</p>
                                 </div>
-                                <div class="flex flex-col items-center text-center mt-2">
-                                    <p class="text-xs mt-1 font-medium text-[#4b3621] dark:text-white">
-                                        {{ producto.disponibilidad ? 'Disponible' : 'Agotado' }}
+
+                                <!-- Estado + Botones ajustados -->
+                                <div>
+                                    <p class="text-xs font-semibold text-center mb-1" :class="[
+                                        producto.cantidad_disponible === 0 || !producto.disponibilidad
+                                            ? 'text-red-600 dark:text-red-400'
+                                            : 'text-green-600 dark:text-green-400'
+                                    ]">
+                                        Estado: {{
+                                            producto.cantidad_disponible === 0 || !producto.disponibilidad
+                                                ? 'Agotado'
+                                                : 'Disponible'
+                                        }}
                                     </p>
-                                    <button @click.stop="toggleDisponibilidad(producto.id_producto)"
-                                        class="mt-1 bg-yellow-500 hover:bg-yellow-600 text-white text-[11px] font-medium py-1 px-3 rounded shadow">
-                                        {{ producto.disponibilidad ? 'Marcar como Agotado' : 'Marcar como Disponible' }}
-                                    </button>
+
+                                    <div class="flex justify-between gap-2">
+                                        <button
+                                            :title="producto.cantidad_disponible === 0 ? 'No disponible: cantidad es 0' : ''"
+                                            @click.stop="producto.cantidad_disponible > 0 && toggleDisponibilidad(producto.id_producto)"
+                                            :disabled="producto.cantidad_disponible === 0" :class="[
+                                                'text-white text-[11px] font-medium py-1 px-2 rounded shadow w-1/2',
+                                                producto.cantidad_disponible === 0
+                                                    ? 'bg-gray-400 cursor-not-allowed'
+                                                    : 'bg-yellow-500 hover:bg-yellow-600'
+                                            ]">
+                                            {{ producto.disponibilidad ? 'Agotar' : 'Disponible' }}
+                                        </button>
+
+                                        <button @click.stop="toggleFlip(producto.id_producto)"
+                                            class="bg-[#6b4f3c] hover:bg-[#8c5c3b] text-white text-[11px] font-medium py-1 px-2 rounded shadow w-1/2">
+                                            Detalles
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-
-
                             <!-- Reverso -->
                             <div
                                 class="absolute w-full h-full backface-hidden rotate-y-180 bg-[#faf4ed] dark:bg-[#2c211b] border border-[#c5a880] dark:border-[#8c5c3b] rounded-xl p-3 flex flex-col justify-between">
                                 <div>
-                                    <h3 class="text-sm font-semibold mb-2">{{ producto.nombre }}</h3>
+                                    <h3 class="text-sm font-semibold mb-1">{{ producto.nombre }}</h3>
                                     <p class="text-xs whitespace-pre-line break-words">
                                         {{ producto.descripcion || 'Sin descripción' }}
                                     </p>
@@ -176,7 +230,10 @@ const productosFiltrados = computed(() => {
                                         class="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold py-1 px-2 rounded w-full">
                                         Eliminar
                                     </button>
-
+                                    <button @click.stop="toggleFlip(producto.id_producto)"
+                                        class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold py-1 px-2 rounded w-full">
+                                        Volver
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -190,7 +247,7 @@ const productosFiltrados = computed(() => {
             <div class="bg-white dark:bg-[#2c211b] p-4 sm:p-6 rounded-lg w-full max-w-sm shadow-xl text-sm">
                 <h2 class="text-lg font-bold mb-3 text-[#593E25] dark:text-[#d9a679]">Confirmar eliminación</h2>
                 <p class="mb-4">¿Estás seguro que deseas eliminar el producto <strong>{{ selectedProductName
-                }}</strong>?</p>
+                        }}</strong>?</p>
                 <div class="flex justify-end gap-2">
                     <button @click="cancelarEliminar" class="px-3 py-1.5 border rounded">Cancelar</button>
                     <button @click="eliminarProducto"

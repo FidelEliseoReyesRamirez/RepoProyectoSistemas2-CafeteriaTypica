@@ -1,14 +1,11 @@
 <?php
 
-/**
- * Created by Reliese Model.
- */
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Categorium;
+
 /**
  * Class Producto
  * 
@@ -18,6 +15,8 @@ use App\Models\Categorium;
  * @property int|null $id_categoria
  * @property float $precio
  * @property bool|null $disponibilidad
+ * @property string|null $imagen
+ * @property int|null $cantidad_disponible
  * @property bool|null $eliminado
  * 
  * @property Categorium|null $categorium
@@ -36,6 +35,7 @@ class Producto extends Model
 		'id_categoria' => 'int',
 		'precio' => 'float',
 		'disponibilidad' => 'bool',
+		'cantidad_disponible' => 'int',
 		'imagen' => 'string',
 		'eliminado' => 'bool'
 	];
@@ -46,7 +46,8 @@ class Producto extends Model
 		'id_categoria',
 		'precio',
 		'disponibilidad',
-		'imagen', 
+		'imagen',
+		'cantidad_disponible',
 		'eliminado'
 	];
 
@@ -64,5 +65,4 @@ class Producto extends Model
 	{
 		return $this->hasMany(Prediccion::class, 'id_producto');
 	}
-
 }

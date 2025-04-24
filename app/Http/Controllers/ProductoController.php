@@ -125,4 +125,16 @@ class ProductoController extends Controller
             'eliminado' => 0,
         ]);
     }
+    public function actualizarCantidad(Request $request, $id)
+    {
+        $request->validate([
+            'cantidad' => 'required|integer|min:0'
+        ]);
+
+        $producto = Producto::findOrFail($id);
+        $producto->cantidad_disponible = $request->cantidad;
+        $producto->save();
+
+        return back();
+    }
 }
