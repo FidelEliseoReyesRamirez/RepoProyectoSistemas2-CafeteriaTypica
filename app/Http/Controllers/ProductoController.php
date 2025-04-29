@@ -132,8 +132,34 @@ class ProductoController extends Controller
         ]);
 
         $producto = Producto::findOrFail($id);
+        $cantidadAnterior = $producto->cantidad_disponible;
         $producto->cantidad_disponible = $request->cantidad;
         $producto->save();
+
+        $admin = Auth::user()->nombre;
+
+        
+        $ultimaAuditoria = Auditorium::where('id_usuario', Auth::id())
+            ->where('accion', 'Actualizar stock de producto')
+            ->where('descripcion', 'like', "%{$producto->nombre}%")
+            ->where('fecha_hora', '>=', now()->subSeconds(5))
+            ->latest('fecha_hora')
+            ->first();
+
+        if ($ultimaAuditoria) {
+       
+            preg_match('/de (\d+)/', $ultimaAuditoria->descripcion, $matches);
+            $stockInicial = $matches[1] ?? $cantidadAnterior;
+
+           
+            $ultimaAuditoria->update([
+                'descripcion' => "$admin actualizó el stock de {$producto->nombre} de $stockInicial a {$request->cantidad}",
+                'fecha_hora' => now(),
+            ]);
+        } else {
+           
+            $this->registrarAuditoria('Actualizar stock de producto', "$admin actualizó el stock de {$producto->nombre} de $cantidadAnterior a {$request->cantidad}");
+        }
 
         return back();
     }
