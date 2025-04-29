@@ -11,4 +11,5 @@ https://univalleedu-my.sharepoint.com/:w:/g/personal/rrf2027460_est_univalle_edu
 
 
 php artisan migrate
+
 php artisan db:seed
