@@ -8,3 +8,7 @@ https://univalleedu-my.sharepoint.com/:w:/g/personal/rrf2027460_est_univalle_edu
 
 DOCUMENTO PARA METODOLOGÍA 
 https://univalleedu-my.sharepoint.com/:w:/g/personal/rrf2027460_est_univalle_edu/EYnAt_kGJdBCrisX7ZjP4DIBQZqvHEfSKA-N3lAXJwLAow
+
+
+php artisan migrate
+php artisan db:seed
