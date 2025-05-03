@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { PageProps } from '@/types';
 
 const page = usePage<PageProps>();
@@ -27,6 +27,7 @@ const props = defineProps<{
     }[];
 }>();
 
+const orders = ref(props.orders);
 const selectedOrder = ref<number | null>(null);
 const showResumen = ref(false);
 
@@ -41,27 +42,46 @@ const cerrarResumen = () => {
 };
 
 const pedidoSeleccionado = computed(() => {
-    return props.orders.find(o => o.id_pedido === selectedOrder.value);
+    return orders.value.find(o => o.id_pedido === selectedOrder.value);
 });
 
 const puedeCancelar = (orderDate: string): boolean => {
     if (!authUser.value) return false;
     const rol = authUser.value.id_rol;
-    if (rol === 1) return true; // Admin
+    if (rol === 1) return true;
     if (rol === 2) {
         const fechaPedido = new Date(orderDate).getTime();
         const ahora = new Date().getTime();
-        return (ahora - fechaPedido) < 5 * 60 * 1000; // 5 minutos
+        return (ahora - fechaPedido) < 5 * 60 * 1000;
     }
     return false;
 };
+
+const actualizarPedidos = async () => {
+    try {
+        const response = await fetch('/api/my-orders');
+        if (!response.ok) throw new Error('No se pudieron obtener los pedidos');
+        const data = await response.json();
+        orders.value = data.orders;
+    } catch (error) {
+        console.error('Error actualizando pedidos:', error);
+    }
+};
+
+let intervaloActualizacion: number;
+
+onMounted(() => {
+    intervaloActualizacion = setInterval(actualizarPedidos, 1000);
+});
+
+onUnmounted(() => {
+    clearInterval(intervaloActualizacion);
+});
 </script>
 
 <template>
     <AppLayout>
-
         <Head title="My Orders" />
-
         <div class="p-4 sm:p-6 text-[#4b3621] dark:text-white">
             <div class="flex justify-between items-center mb-4">
                 <h1 class="text-2xl font-bold text-[#593E25] dark:text-[#d9a679]">Mis Pedidos</h1>
@@ -71,12 +91,10 @@ const puedeCancelar = (orderDate: string): boolean => {
                 </button>
             </div>
 
-            <div v-if="props.orders.length">
-                <div v-for="order in props.orders" :key="order.id_pedido"
+            <div v-if="orders.length">
+                <div v-for="order in orders" :key="order.id_pedido"
                     class="mb-4 p-4 rounded shadow border border-[#d8c6ad] dark:border-[#6c4f3c] relative overflow-hidden"
                     :style="{ backgroundColor: order.estadopedido.color_codigo + '22' }">
-
-                    <!-- Bandas laterales -->
                     <div class="absolute top-0 left-0 h-full w-2"
                         :style="{ backgroundColor: order.estadopedido?.color_codigo || '#ccc' }"></div>
                     <div class="absolute top-0 right-0 h-full w-2"
@@ -89,12 +107,13 @@ const puedeCancelar = (orderDate: string): boolean => {
                             <div class="flex items-center gap-2 mt-1">
                                 <span class="w-3 h-3 rounded-full"
                                     :style="{ backgroundColor: order.estadopedido.color_codigo }"></span>
-                                <span class="px-2 py-0.5 rounded text-xs font-semibold" :class="['Cancelado', 'Entregado', 'Pagado'].includes(order.estadopedido.nombre_estado)
-                                    ? 'text-white'
-                                    : 'text-black dark:text-black'" :style="{ backgroundColor: order.estadopedido.color_codigo }">
+                                <span class="px-2 py-0.5 rounded text-xs font-semibold"
+                                    :class="['Cancelado', 'Entregado', 'Pagado'].includes(order.estadopedido.nombre_estado)
+                                        ? 'text-white'
+                                        : 'text-black dark:text-black'"
+                                    :style="{ backgroundColor: order.estadopedido.color_codigo }">
                                     {{ order.estadopedido.nombre_estado }}
                                 </span>
-
                             </div>
                         </div>
 
@@ -104,22 +123,24 @@ const puedeCancelar = (orderDate: string): boolean => {
                                 Ver resumen
                             </button>
 
-                            <button @click="() => { }" class="text-white text-xs px-3 py-1 rounded shadow" :class="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : 'bg-yellow-600 hover:bg-yellow-700'"
+                            <button @click="() => { }"
+                                class="text-white text-xs px-3 py-1 rounded shadow"
+                                :class="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-yellow-600 hover:bg-yellow-700'"
                                 :disabled="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
                                 Editar
                             </button>
 
-
-                            <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'" @click="() => { }"
-                                class="text-white text-xs px-3 py-1 rounded shadow" :class="puedeCancelar(order.fecha_hora_registro) && !['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
+                            <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'"
+                                @click="() => { }"
+                                class="text-white text-xs px-3 py-1 rounded shadow"
+                                :class="puedeCancelar(order.fecha_hora_registro) && !['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
                                     ? 'bg-red-600 hover:bg-red-700'
                                     : 'bg-gray-400 cursor-not-allowed'"
                                 :disabled="!puedeCancelar(order.fecha_hora_registro) || ['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
                                 Cancelar
                             </button>
-
                         </div>
                     </div>
                 </div>
@@ -128,7 +149,7 @@ const puedeCancelar = (orderDate: string): boolean => {
             <p v-else class="text-sm text-gray-600">No tienes pedidos registrados.</p>
         </div>
 
-        <!-- Modal Resumen -->
+        <!-- Modal -->
         <div v-if="showResumen && pedidoSeleccionado"
             class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
             <div class="bg-white dark:bg-[#2c211b] rounded-lg p-6 shadow-xl w-full max-w-md">
@@ -139,8 +160,8 @@ const puedeCancelar = (orderDate: string): boolean => {
                             <div>
                                 <p class="font-medium">{{ item.producto.nombre }}</p>
                                 <p class="text-xs text-gray-500">Cantidad: {{ item.cantidad }}</p>
-                                <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">
-                                    "{{ item.comentario }}"</p>
+                                <p v-if="item.comentario"
+                                   class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">"{{ item.comentario }}"</p>
                             </div>
                             <p class="font-semibold">{{ (item.producto.precio * item.cantidad).toFixed(2) }} Bs</p>
                         </div>

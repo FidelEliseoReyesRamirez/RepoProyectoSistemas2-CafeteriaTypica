@@ -71,3 +71,17 @@ Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
     ->name('orders.my');
 
 });
+use Illuminate\Support\Facades\Auth;
+use App\Models\Pedido;
+
+Route::middleware('auth')->get('/api/my-orders', function () {
+    $userId = Auth::id();
+
+    $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
+        ->where('id_usuario_mesero', $userId)
+        ->orderByDesc('fecha_hora_registro')
+        ->get();
+
+    return response()->json(['orders' => $orders]);
+});
+
