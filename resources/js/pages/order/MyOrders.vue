@@ -59,6 +59,7 @@ const puedeCancelar = (orderDate: string): boolean => {
 
 <template>
     <AppLayout>
+
         <Head title="My Orders" />
 
         <div class="p-4 sm:p-6 text-[#4b3621] dark:text-white">
@@ -88,14 +89,12 @@ const puedeCancelar = (orderDate: string): boolean => {
                             <div class="flex items-center gap-2 mt-1">
                                 <span class="w-3 h-3 rounded-full"
                                     :style="{ backgroundColor: order.estadopedido.color_codigo }"></span>
-                                <span class="px-2 py-0.5 rounded text-xs font-semibold"
-                                    :class="{
-                                        'text-black': true,
-                                        'dark:text-black': true
-                                    }"
-                                    :style="{ backgroundColor: order.estadopedido.color_codigo }">
+                                <span class="px-2 py-0.5 rounded text-xs font-semibold" :class="['Cancelado', 'Entregado', 'Pagado'].includes(order.estadopedido.nombre_estado)
+                                    ? 'text-white'
+                                    : 'text-black dark:text-black'" :style="{ backgroundColor: order.estadopedido.color_codigo }">
                                     {{ order.estadopedido.nombre_estado }}
                                 </span>
+
                             </div>
                         </div>
 
@@ -105,22 +104,22 @@ const puedeCancelar = (orderDate: string): boolean => {
                                 Ver resumen
                             </button>
 
-                            <button @click="() => { }" class="text-white text-xs px-3 py-1 rounded shadow"
-                                :class="(authUser?.id_rol === 1 || authUser?.id_rol === 2) && order.estadopedido.nombre_estado !== 'Pagado'
-                                    ? 'bg-yellow-600 hover:bg-yellow-700'
-                                    : 'bg-gray-400 cursor-not-allowed'"
-                                :disabled="order.estadopedido.nombre_estado === 'Pagado' || !authUser || !(authUser.id_rol === 1 || authUser.id_rol === 2)">
+                            <button @click="() => { }" class="text-white text-xs px-3 py-1 rounded shadow" :class="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-yellow-600 hover:bg-yellow-700'"
+                                :disabled="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
                                 Editar
                             </button>
 
+
                             <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'" @click="() => { }"
-                                class="text-white text-xs px-3 py-1 rounded shadow"
-                                :class="puedeCancelar(order.fecha_hora_registro) && order.estadopedido.nombre_estado !== 'Pagado'
+                                class="text-white text-xs px-3 py-1 rounded shadow" :class="puedeCancelar(order.fecha_hora_registro) && !['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
                                     ? 'bg-red-600 hover:bg-red-700'
                                     : 'bg-gray-400 cursor-not-allowed'"
-                                :disabled="order.estadopedido.nombre_estado === 'Pagado' || !puedeCancelar(order.fecha_hora_registro)">
+                                :disabled="!puedeCancelar(order.fecha_hora_registro) || ['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
                                 Cancelar
                             </button>
+
                         </div>
                     </div>
                 </div>
@@ -140,7 +139,8 @@ const puedeCancelar = (orderDate: string): boolean => {
                             <div>
                                 <p class="font-medium">{{ item.producto.nombre }}</p>
                                 <p class="text-xs text-gray-500">Cantidad: {{ item.cantidad }}</p>
-                                <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">"{{ item.comentario }}"</p>
+                                <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">
+                                    "{{ item.comentario }}"</p>
                             </div>
                             <p class="font-semibold">{{ (item.producto.precio * item.cantidad).toFixed(2) }} Bs</p>
                         </div>
