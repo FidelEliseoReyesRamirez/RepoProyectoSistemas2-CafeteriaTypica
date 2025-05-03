@@ -121,9 +121,9 @@ const productosAgrupados = computed(() => {
     const termino = filtro.value.toLowerCase();
 
     for (const p of props.productos) {
-        const coincideBusqueda = 
-            !termino || 
-            p.nombre.toLowerCase().includes(termino) || 
+        const coincideBusqueda =
+            !termino ||
+            p.nombre.toLowerCase().includes(termino) ||
             (p.categorium?.nombre ?? '').toLowerCase().includes(termino);
 
         const coincideDisponible = !filtroSoloDisponibles.value || (p.disponibilidad && p.cantidad_disponible > 0);
@@ -164,6 +164,7 @@ const total = computed(() =>
 
 <template>
     <AppLayout>
+
         <Head title="Crear Pedido" />
 
         <div class="w-full px-4 sm:px-6 text-[#4b3621] dark:text-white overflow-x-hidden max-w-full">
@@ -190,6 +191,12 @@ const total = computed(() =>
                     class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded shadow">
                     Limpiar filtros
                 </button>
+                <button @click="() => router.visit('/my-orders')"
+                    class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded shadow">
+                    Mis pedidos
+                </button>
+
+
             </div>
 
             <div class="flex flex-col-reverse lg:flex-row gap-6">
@@ -226,8 +233,7 @@ const total = computed(() =>
                     <h2 class="text-lg font-semibold mb-2">Pedido</h2>
 
                     <div class="space-y-4">
-                        <div v-for="item in carrito" :key="item.id_producto"
-                            class="flex flex-col border-b pb-3">
+                        <div v-for="item in carrito" :key="item.id_producto" class="flex flex-col border-b pb-3">
                             <p class="font-semibold">{{ item.nombre }}</p>
                             <input v-model.number="item.cantidad" type="number" @input="validarCantidad(item)" min="1"
                                 :max="buscarStock(item.id_producto)"

@@ -54,8 +54,10 @@ class Pedido extends Model
 
 	public function estadopedido()
 	{
-		return $this->belongsTo(Estadopedido::class, 'estado_actual');
+		return $this->belongsTo(Estadopedido::class, 'estado_actual', 'id_estado')
+			->select(['id_estado', 'nombre_estado', 'color_codigo']);
 	}
+	
 
 	public function detallepedidos()
 	{

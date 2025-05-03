@@ -66,4 +66,8 @@ use App\Http\Controllers\PedidoController;
 Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
     Route::get('/order', [PedidoController::class, 'crear'])->name('order.index');
     Route::post('/order', [PedidoController::class, 'guardar'])->name('order.store');
+    Route::get('/my-orders', [PedidoController::class, 'myOrders'])
+    ->middleware(['auth'])
+    ->name('orders.my');
+
 });
