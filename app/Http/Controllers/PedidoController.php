@@ -49,6 +49,12 @@ class PedidoController extends Controller
             foreach ($request->items as $item) {
                 $producto = Producto::findOrFail($item['id_producto']);
 
+                // Validar si hay suficiente stock
+                if ($producto->cantidad_disponible < $item['cantidad']) {
+                    throw new \Exception("Stock insuficiente para el producto {$producto->nombre}");
+                }
+
+                // Crear el detalle
                 Detallepedido::create([
                     'id_pedido' => $pedido->id_pedido,
                     'id_producto' => $producto->id_producto,
@@ -58,9 +64,14 @@ class PedidoController extends Controller
                     'eliminado' => 0,
                 ]);
 
+                // Descontar del stock
+                $producto->cantidad_disponible -= $item['cantidad'];
+                $producto->save();
+
                 $productosDescripcion[] = "{$item['cantidad']} x {$producto->nombre}";
                 $totalPedido += $producto->precio * $item['cantidad'];
             }
+
 
             // Registrar en Auditoría después de todo
             $admin = Auth::user()->nombre;
@@ -79,17 +90,17 @@ class PedidoController extends Controller
     public function myOrders()
     {
         $userId = Auth::id();
-    
+
         $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
             ->where('id_usuario_mesero', $userId)
-            ->orderByDesc('fecha_hora_registro') 
+            ->orderByDesc('fecha_hora_registro')
             ->get();
-    
+
         return Inertia::render('order/MyOrders', [
             'orders' => $orders,
         ]);
     }
-    
+
 
 
     private function registrarAuditoria(string $accion, string $descripcion): void

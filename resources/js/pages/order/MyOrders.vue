@@ -31,38 +31,6 @@ const orders = ref(props.orders);
 const previousStates = ref<Record<number, string>>({});
 const selectedOrder = ref<number | null>(null);
 const showResumen = ref(false);
-const audioUnlockBtn = ref<HTMLButtonElement | null>(null);
-
-let audioBuffer: AudioBuffer | null = null;
-const audioContext = new AudioContext();
-
-// Desbloquear audioContext al primer clic del usuario
-const unlockAudioContext = () => {
-    if (audioContext.state === 'suspended') {
-        audioContext.resume();
-    }
-};
-
-// Cargar audio en memoria
-const cargarAudio = async () => {
-    try {
-        const response = await fetch('/sounds/listo.mp3');
-        const arrayBuffer = await response.arrayBuffer();
-        audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    } catch (error) {
-        console.error('Error cargando el audio:', error);
-    }
-};
-
-// Reproducir sonido desde buffer
-const reproducirAudio = () => {
-    if (audioBuffer) {
-        const source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(audioContext.destination);
-        source.start(0);
-    }
-};
 
 const abrirResumen = (id: number) => {
     selectedOrder.value = id;
@@ -97,14 +65,7 @@ const actualizarPedidos = async () => {
         const data = await response.json();
 
         for (const pedido of data.orders) {
-            const anterior = previousStates.value[pedido.id_pedido];
-            const actual = pedido.estadopedido.nombre_estado;
-
-            if (actual === 'Listo para servir' && anterior && anterior !== actual) {
-                reproducirAudio();
-            }
-
-            previousStates.value[pedido.id_pedido] = actual;
+            previousStates.value[pedido.id_pedido] = pedido.estadopedido.nombre_estado;
         }
 
         orders.value = data.orders;
@@ -116,8 +77,6 @@ const actualizarPedidos = async () => {
 let intervaloActualizacion: number;
 
 onMounted(() => {
-    document.addEventListener('click', unlockAudioContext, { once: true });
-    cargarAudio();
     for (const pedido of orders.value) {
         previousStates.value[pedido.id_pedido] = pedido.estadopedido.nombre_estado;
     }
@@ -131,6 +90,7 @@ onUnmounted(() => {
 
 <template>
     <AppLayout>
+
         <Head title="My Orders" />
         <div class="p-4 sm:p-6 text-[#4b3621] dark:text-white">
             <div class="flex justify-between items-center mb-4">
@@ -157,10 +117,9 @@ onUnmounted(() => {
                             <div class="flex items-center gap-2 mt-1">
                                 <span class="w-3 h-3 rounded-full"
                                     :style="{ backgroundColor: order.estadopedido.color_codigo }"></span>
-                                <span class="px-2 py-0.5 rounded text-xs font-semibold"
-                                    :class="['Cancelado', 'Entregado', 'Pagado'].includes(order.estadopedido.nombre_estado)
-                                        ? 'text-white'
-                                        : 'text-black dark:text-black'"
+                                <span class="px-2 py-0.5 rounded text-xs font-semibold" :class="['Cancelado', 'Entregado', 'Pagado'].includes(order.estadopedido.nombre_estado)
+                                    ? 'text-white'
+                                    : 'text-black dark:text-black'"
                                     :style="{ backgroundColor: order.estadopedido.color_codigo }">
                                     {{ order.estadopedido.nombre_estado }}
                                 </span>
@@ -173,19 +132,15 @@ onUnmounted(() => {
                                 Ver resumen
                             </button>
 
-                            <button @click="() => { }"
-                                class="text-white text-xs px-3 py-1 rounded shadow"
-                                :class="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : 'bg-yellow-600 hover:bg-yellow-700'"
+                            <button @click="() => { }" class="text-white text-xs px-3 py-1 rounded shadow" :class="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-yellow-600 hover:bg-yellow-700'"
                                 :disabled="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
                                 Editar
                             </button>
 
-                            <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'"
-                                @click="() => { }"
-                                class="text-white text-xs px-3 py-1 rounded shadow"
-                                :class="puedeCancelar(order.fecha_hora_registro) && !['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
+                            <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'" @click="() => { }"
+                                class="text-white text-xs px-3 py-1 rounded shadow" :class="puedeCancelar(order.fecha_hora_registro) && !['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
                                     ? 'bg-red-600 hover:bg-red-700'
                                     : 'bg-gray-400 cursor-not-allowed'"
                                 :disabled="!puedeCancelar(order.fecha_hora_registro) || ['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
@@ -210,14 +165,27 @@ onUnmounted(() => {
                             <div>
                                 <p class="font-medium">{{ item.producto.nombre }}</p>
                                 <p class="text-xs text-gray-500">Cantidad: {{ item.cantidad }}</p>
-                                <p v-if="item.comentario"
-                                   class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">"{{ item.comentario }}"</p>
+                                <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">
+                                    "{{ item.comentario }}"</p>
                             </div>
                             <p class="font-semibold">{{ (item.producto.precio * item.cantidad).toFixed(2) }} Bs</p>
                         </div>
                     </li>
                 </ul>
-                <div class="flex justify-end">
+
+                <!-- Total del pedido -->
+                <div class="flex justify-between font-bold border-t pt-2">
+                    <p>Total:</p>
+                    <p>
+                        {{
+                            pedidoSeleccionado.detallepedidos
+                                .reduce((sum, item) => sum + item.producto.precio * item.cantidad, 0)
+                                .toFixed(2)
+                        }} Bs
+                    </p>
+                </div>
+
+                <div class="flex justify-end mt-4">
                     <button @click="cerrarResumen"
                         class="px-4 py-2 rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
                         Cerrar
@@ -225,5 +193,6 @@ onUnmounted(() => {
                 </div>
             </div>
         </div>
+
     </AppLayout>
 </template>
