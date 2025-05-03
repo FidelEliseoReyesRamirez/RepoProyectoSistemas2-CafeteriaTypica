@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppAudioWatcher from '@/components/AppAudioWatcher.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -70,6 +71,6 @@ const mainNavItems: NavItem[] = [
       <NavUser />
     </SidebarFooter>
   </Sidebar>
-
+  <AppAudioWatcher />
   <slot />
 </template>
