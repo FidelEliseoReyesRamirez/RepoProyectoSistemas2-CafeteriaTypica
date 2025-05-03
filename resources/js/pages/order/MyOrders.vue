@@ -28,8 +28,41 @@ const props = defineProps<{
 }>();
 
 const orders = ref(props.orders);
+const previousStates = ref<Record<number, string>>({});
 const selectedOrder = ref<number | null>(null);
 const showResumen = ref(false);
+const audioUnlockBtn = ref<HTMLButtonElement | null>(null);
+
+let audioBuffer: AudioBuffer | null = null;
+const audioContext = new AudioContext();
+
+// Desbloquear audioContext al primer clic del usuario
+const unlockAudioContext = () => {
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+};
+
+// Cargar audio en memoria
+const cargarAudio = async () => {
+    try {
+        const response = await fetch('/sounds/listo.mp3');
+        const arrayBuffer = await response.arrayBuffer();
+        audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    } catch (error) {
+        console.error('Error cargando el audio:', error);
+    }
+};
+
+// Reproducir sonido desde buffer
+const reproducirAudio = () => {
+    if (audioBuffer) {
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+        source.start(0);
+    }
+};
 
 const abrirResumen = (id: number) => {
     selectedOrder.value = id;
@@ -62,6 +95,18 @@ const actualizarPedidos = async () => {
         const response = await fetch('/api/my-orders');
         if (!response.ok) throw new Error('No se pudieron obtener los pedidos');
         const data = await response.json();
+
+        for (const pedido of data.orders) {
+            const anterior = previousStates.value[pedido.id_pedido];
+            const actual = pedido.estadopedido.nombre_estado;
+
+            if (actual === 'Listo para servir' && anterior && anterior !== actual) {
+                reproducirAudio();
+            }
+
+            previousStates.value[pedido.id_pedido] = actual;
+        }
+
         orders.value = data.orders;
     } catch (error) {
         console.error('Error actualizando pedidos:', error);
@@ -71,6 +116,11 @@ const actualizarPedidos = async () => {
 let intervaloActualizacion: number;
 
 onMounted(() => {
+    document.addEventListener('click', unlockAudioContext, { once: true });
+    cargarAudio();
+    for (const pedido of orders.value) {
+        previousStates.value[pedido.id_pedido] = pedido.estadopedido.nombre_estado;
+    }
     intervaloActualizacion = setInterval(actualizarPedidos, 1000);
 });
 
