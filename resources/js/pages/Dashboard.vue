@@ -55,7 +55,7 @@ const guardarTiempo = async () => {
 <template>
   <AppLayout :breadcrumbs="breadcrumbs">
     <div class="p-4 flex items-center gap-2">
-      <label class="text-sm font-medium whitespace-nowrap">Minutos para cancelar pedidos:</label>
+      <label class="text-sm font-medium whitespace-nowrap">Minutos para cancelar pedidos: (Meseros)</label>
       <input
         type="number"
         v-model.number="tiempoCancelacion"
