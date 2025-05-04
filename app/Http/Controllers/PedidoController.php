@@ -101,8 +101,93 @@ class PedidoController extends Controller
         ]);
     }
 
-
-
+    public function editar($id)
+    {
+        $pedido = Pedido::with(['detallepedidos.producto'])->findOrFail($id);
+        
+        $productos = Producto::with('categorium')
+            ->where('disponibilidad', 1)
+            ->where('eliminado', 0)
+            ->get();
+    
+        $carrito = $pedido->detallepedidos->map(function ($item) {
+            return [
+                'id_producto' => $item->producto->id_producto,
+                'nombre' => $item->producto->nombre,
+                'precio' => $item->producto->precio,
+                'cantidad' => $item->cantidad,
+                'comentario' => $item->comentario,
+            ];
+        });
+    
+        return Inertia::render('order/Order', [
+            'productos' => $productos,
+            'carritoInicial' => $carrito,
+            'pedidoId' => $pedido->id_pedido
+        ]);
+    }
+    
+    public function actualizar(Request $request, $id)
+    {
+        $request->validate([
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.id_producto' => ['required', 'exists:producto,id_producto'],
+            'items.*.cantidad' => ['required', 'integer', 'min:1'],
+            'items.*.comentario' => ['nullable', 'string'],
+        ]);
+    
+        DB::transaction(function () use ($request, $id) {
+            $pedido = Pedido::with('detallepedidos')->findOrFail($id);
+    
+            // Revertir stock anterior
+            foreach ($pedido->detallepedidos as $detalle) {
+                $producto = Producto::find($detalle->id_producto);
+                if ($producto) {
+                    $producto->cantidad_disponible += $detalle->cantidad;
+                    $producto->save();
+                }
+                $detalle->delete();
+            }
+    
+            $productosDescripcion = [];
+            $totalPedido = 0;
+    
+            foreach ($request->items as $item) {
+                $producto = Producto::findOrFail($item['id_producto']);
+    
+                if ($producto->cantidad_disponible < $item['cantidad']) {
+                    throw new \Exception("Stock insuficiente para el producto {$producto->nombre}");
+                }
+    
+                Detallepedido::create([
+                    'id_pedido' => $pedido->id_pedido,
+                    'id_producto' => $producto->id_producto,
+                    'cantidad' => $item['cantidad'],
+                    'comentario' => $item['comentario'] ?? null,
+                    'precio_unitario' => $producto->precio,
+                    'eliminado' => 0,
+                ]);
+    
+                $producto->cantidad_disponible -= $item['cantidad'];
+                $producto->save();
+    
+                $productosDescripcion[] = "{$item['cantidad']} x {$producto->nombre}";
+                $totalPedido += $producto->precio * $item['cantidad'];
+            }
+    
+            $admin = Auth::user()->nombre;
+            $detalleProductos = implode(', ', $productosDescripcion);
+            $totalPedidoFormatted = number_format($totalPedido, 2);
+    
+            $this->registrarAuditoria(
+                'Editar pedido',
+                "$admin editó el pedido #{$pedido->id_pedido} con: $detalleProductos (Total: Bs $totalPedidoFormatted)"
+            );
+        });
+    
+        return redirect()->route('orders.my')->with('success', 'Pedido actualizado correctamente.');
+    }
+    
     private function registrarAuditoria(string $accion, string $descripcion): void
     {
         Auditorium::create([

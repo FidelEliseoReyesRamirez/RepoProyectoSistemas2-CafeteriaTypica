@@ -132,12 +132,14 @@ onUnmounted(() => {
                                 Ver resumen
                             </button>
 
-                            <button @click="() => { }" class="text-white text-xs px-3 py-1 rounded shadow" :class="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : 'bg-yellow-600 hover:bg-yellow-700'"
+                            <button @click="router.visit(`/order/edit/${order.id_pedido}`)"
+                                class="text-white text-xs px-3 py-1 rounded shadow" :class="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-yellow-600 hover:bg-yellow-700'"
                                 :disabled="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
                                 Editar
                             </button>
+
 
                             <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'" @click="() => { }"
                                 class="text-white text-xs px-3 py-1 rounded shadow" :class="puedeCancelar(order.fecha_hora_registro) && !['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)

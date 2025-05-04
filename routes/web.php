@@ -69,6 +69,9 @@ Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
     Route::get('/my-orders', [PedidoController::class, 'myOrders'])
     ->middleware(['auth'])
     ->name('orders.my');
+    Route::get('/order/edit/{id}', [PedidoController::class, 'editar'])->name('order.edit');
+    Route::put('/order/{id}', [PedidoController::class, 'actualizar'])->name('order.update');
+
 
 });
 use Illuminate\Support\Facades\Auth;

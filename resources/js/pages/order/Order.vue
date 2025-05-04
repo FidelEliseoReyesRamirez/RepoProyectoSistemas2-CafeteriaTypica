@@ -15,7 +15,18 @@ interface Producto {
 }
 
 // Props
-const props = defineProps<{ productos: Producto[] }>();
+const props = defineProps<{
+    productos: Producto[];
+    carritoInicial?: {
+        id_producto: number;
+        nombre: string;
+        precio: number;
+        cantidad: number;
+        comentario: string;
+    }[];
+    pedidoId?: number;
+}>();
+
 
 // Carrito
 const carrito = ref<{ id_producto: number; nombre: string; precio: number; cantidad: number; comentario: string }[]>([]);
@@ -79,19 +90,31 @@ const quitarProducto = (id: number) => {
 const enviarPedido = () => {
     if (carrito.value.length === 0) return;
 
-    router.post('/order', {
+    const payload = {
         items: carrito.value.map(p => ({
             id_producto: p.id_producto,
             cantidad: p.cantidad,
             comentario: p.comentario,
         }))
-    }, {
-        onSuccess: () => {
-            carrito.value = [];
-            localStorage.removeItem('carrito_pedido');
-        }
-    });
+    };
+
+    if (props.pedidoId) {
+        router.put(`/order/${props.pedidoId}`, payload, {
+            onSuccess: () => {
+                carrito.value = [];
+                localStorage.removeItem('carrito_pedido');
+            }
+        });
+    } else {
+        router.post('/order', payload, {
+            onSuccess: () => {
+                carrito.value = [];
+                localStorage.removeItem('carrito_pedido');
+            }
+        });
+    }
 };
+
 
 const cancelarPedido = () => {
     carrito.value = [];
@@ -141,16 +164,29 @@ const productosAgrupados = computed(() => {
 
 // LocalStorage
 onMounted(() => {
-    const data = localStorage.getItem('carrito_pedido');
-    if (data) {
-        try {
-            carrito.value = JSON.parse(data);
-        } catch (e) {
-            console.error('Error al cargar carrito local:', e);
-            localStorage.removeItem('carrito_pedido');
+    if (props.carritoInicial) {
+        carrito.value = props.carritoInicial.map(item => ({
+            ...item,
+            comentario: item.comentario ?? '', // ← aquí se asegura que sea string
+        }));
+    } else {
+        const data = localStorage.getItem('carrito_pedido');
+        if (data) {
+            try {
+                const parsed = JSON.parse(data);
+                carrito.value = parsed.map((item: any) => ({
+                    ...item,
+                    comentario: item.comentario ?? '',
+                }));
+            } catch (e) {
+                console.error('Error al cargar carrito local:', e);
+                localStorage.removeItem('carrito_pedido');
+            }
         }
     }
 });
+
+
 
 watch(carrito, (nuevo) => {
     localStorage.setItem('carrito_pedido', JSON.stringify(nuevo));
@@ -166,6 +202,9 @@ const total = computed(() =>
     <AppLayout>
 
         <Head title="Crear Pedido" />
+        <h1 class="text-2xl font-bold mb-4 text-[#593E25] dark:text-[#d9a679]">
+            {{ props.pedidoId ? 'Editar Pedido' : 'Ordenar productos' }}
+        </h1>
 
         <div class="w-full px-4 sm:px-6 text-[#4b3621] dark:text-white overflow-x-hidden max-w-full">
             <h1 class="text-2xl font-bold mb-4 text-[#593E25] dark:text-[#d9a679]">Ordenar productos</h1>
@@ -242,9 +281,10 @@ const total = computed(() =>
                             <textarea v-model="item.comentario" placeholder="Comentario opcional"
                                 class="mt-2 w-full border px-2 py-1 rounded text-sm bg-white dark:bg-[#1d1b16]"
                                 :class="[item.comentario.length > 255 ? 'border-red-500 dark:border-red-400' : 'border-[#c5a880] dark:border-[#8c5c3b]']" />
-                            <p v-if="item.comentario.length > 255" class="text-xs text-red-500 mt-1">
+                            <p v-if="item.comentario && item.comentario.length > 255" class="text-xs text-red-500 mt-1">
                                 El comentario no puede tener más de 255 caracteres.
                             </p>
+
                             <div class="flex justify-between items-center mt-1">
                                 <p class="text-sm font-medium">{{ (item.precio * item.cantidad).toFixed(2) }} Bs</p>
                                 <button @click="quitarProducto(item.id_producto)"
