@@ -119,12 +119,25 @@ const enviarPedido = () => {
 const cancelarPedido = () => {
     carrito.value = [];
     localStorage.removeItem('carrito_pedido');
+
+    if (props.pedidoId) {
+        // Si es edición, volver a la ruta normal de creación
+        router.visit('/order');
+    }
 };
 
+
 const buscarStock = (id_producto: number) => {
-    const prod = props.productos.find(p => p.id_producto === id_producto);
-    return prod ? prod.cantidad_disponible : 1;
+    const producto = props.productos.find(p => p.id_producto === id_producto);
+    const original = props.carritoInicial?.find(p => p.id_producto === id_producto);
+
+    if (!producto) return 0;
+
+    // Si estás editando y ya tenías ese producto en el pedido inicial, se suma esa cantidad al stock actual
+    const stockDisponible = producto.cantidad_disponible + (original?.cantidad ?? 0);
+    return stockDisponible;
 };
+
 
 const validarCantidad = (item: { id_producto: number; cantidad: number; }) => {
     const stock = buscarStock(item.id_producto);
