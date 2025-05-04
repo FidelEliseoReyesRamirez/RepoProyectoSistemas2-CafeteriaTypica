@@ -104,12 +104,12 @@ class PedidoController extends Controller
     public function editar($id)
     {
         $pedido = Pedido::with(['detallepedidos.producto'])->findOrFail($id);
-        
+
         $productos = Producto::with('categorium')
             ->where('disponibilidad', 1)
             ->where('eliminado', 0)
             ->get();
-    
+
         $carrito = $pedido->detallepedidos->map(function ($item) {
             return [
                 'id_producto' => $item->producto->id_producto,
@@ -119,14 +119,14 @@ class PedidoController extends Controller
                 'comentario' => $item->comentario,
             ];
         });
-    
+
         return Inertia::render('order/Order', [
             'productos' => $productos,
             'carritoInicial' => $carrito,
             'pedidoId' => $pedido->id_pedido
         ]);
     }
-    
+
     public function actualizar(Request $request, $id)
     {
         $request->validate([
@@ -135,10 +135,10 @@ class PedidoController extends Controller
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
             'items.*.comentario' => ['nullable', 'string'],
         ]);
-    
+
         DB::transaction(function () use ($request, $id) {
             $pedido = Pedido::with('detallepedidos')->findOrFail($id);
-    
+
             // Revertir stock anterior
             foreach ($pedido->detallepedidos as $detalle) {
                 $producto = Producto::find($detalle->id_producto);
@@ -148,17 +148,17 @@ class PedidoController extends Controller
                 }
                 $detalle->delete();
             }
-    
+
             $productosDescripcion = [];
             $totalPedido = 0;
-    
+
             foreach ($request->items as $item) {
                 $producto = Producto::findOrFail($item['id_producto']);
-    
+
                 if ($producto->cantidad_disponible < $item['cantidad']) {
                     throw new \Exception("Stock insuficiente para el producto {$producto->nombre}");
                 }
-    
+
                 Detallepedido::create([
                     'id_pedido' => $pedido->id_pedido,
                     'id_producto' => $producto->id_producto,
@@ -167,27 +167,81 @@ class PedidoController extends Controller
                     'precio_unitario' => $producto->precio,
                     'eliminado' => 0,
                 ]);
-    
+
                 $producto->cantidad_disponible -= $item['cantidad'];
                 $producto->save();
-    
+
                 $productosDescripcion[] = "{$item['cantidad']} x {$producto->nombre}";
                 $totalPedido += $producto->precio * $item['cantidad'];
             }
-    
+
             $admin = Auth::user()->nombre;
             $detalleProductos = implode(', ', $productosDescripcion);
             $totalPedidoFormatted = number_format($totalPedido, 2);
-    
+
             $this->registrarAuditoria(
                 'Editar pedido',
                 "$admin editó el pedido #{$pedido->id_pedido} con: $detalleProductos (Total: Bs $totalPedidoFormatted)"
             );
         });
-    
+
         return redirect()->route('orders.my')->with('success', 'Pedido actualizado correctamente.');
     }
-    
+    public function cancelar($id)
+    {
+        $pedido = Pedido::findOrFail($id);
+
+        // Verificar si ya está cancelado o pagado
+        $estadoActual = $pedido->estadopedido?->nombre_estado;
+        if (in_array($estadoActual, ['Cancelado', 'Pagado'])) {
+            return back()->with('error', 'No se puede cancelar un pedido ya pagado o cancelado.');
+        }
+
+        // Obtener ID del estado 'Cancelado'
+        $estadoCancelado = Estadopedido::where('nombre_estado', 'Cancelado')->firstOrFail();
+
+        // Actualizar el estado
+        $pedido->update(['estado_actual' => $estadoCancelado->id_estado]);
+
+
+        // Registrar auditoría
+        $admin = Auth::user()?->nombre ?? 'Usuario';
+        Auditorium::create([
+            'id_usuario' => Auth::id(),
+            'accion' => 'Cancelar pedido',
+            'descripcion' => "$admin canceló el pedido #{$pedido->id_pedido}",
+            'fecha_hora' => now(),
+            'eliminado' => 0,
+        ]);
+
+        return back()->with('success', 'Pedido cancelado correctamente.');
+    }
+    public function rehacer($id)
+    {
+        $pedido = Pedido::findOrFail($id);
+
+        // Verifica que esté cancelado
+        $estadoActual = $pedido->estadopedido?->nombre_estado;
+        if ($estadoActual !== 'Cancelado') {
+            return back()->with('error', 'Solo se pueden rehacer pedidos cancelados.');
+        }
+
+        $estadoPendiente = Estadopedido::where('nombre_estado', 'Pendiente')->firstOrFail();
+
+        $pedido->update(['estado_actual' => $estadoPendiente->id_estado]);
+
+        $admin = Auth::user()?->nombre ?? 'Usuario';
+        Auditorium::create([
+            'id_usuario' => Auth::id(),
+            'accion' => 'Rehacer pedido',
+            'descripcion' => "$admin reenvió el pedido #{$pedido->id_pedido} a cocina (estado: Pendiente)",
+            'fecha_hora' => now(),
+            'eliminado' => 0,
+        ]);
+
+        return back()->with('success', 'Pedido reenviado a cocina.');
+    }
+
     private function registrarAuditoria(string $accion, string $descripcion): void
     {
         Auditorium::create([

@@ -12,21 +12,21 @@ import {
   SidebarMenuItem
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
-import { Link } from '@inertiajs/vue3';
-import { LayoutGrid, UserPlus } from 'lucide-vue-next';
+import { Link, usePage } from '@inertiajs/vue3';
+import { LayoutGrid, UserPlus, Coffee, Utensils } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
-import { usePage } from '@inertiajs/vue3';
 import type { PageProps } from '@/types';
-import { Coffee, Utensils } from 'lucide-vue-next';
 
 const page = usePage<PageProps>();
 const authUser = page.props.auth.user;
+
 const mainNavItems: NavItem[] = [
-  {
+  ...(authUser && authUser.id_rol === 1 ? [{
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutGrid,
-  },
+  }] : []),
+
   ...(authUser && authUser.id_rol === 1 ? [{
     title: 'Usuarios',
     href: route('users.index'),
@@ -36,7 +36,7 @@ const mainNavItems: NavItem[] = [
   ...(authUser && [1, 3].includes(authUser.id_rol) ? [{
     title: 'Productos',
     href: route('productos.index'),
-    icon: Utensils, 
+    icon: Utensils,
   }] : []),
 
   ...(authUser && [1, 2].includes(authUser.id_rol) ? [{
@@ -46,7 +46,8 @@ const mainNavItems: NavItem[] = [
   }] : []),
 ];
 
-
+// 👉 redirigir el logo al primer ítem permitido
+const firstAvailableHref = mainNavItems.length > 0 ? mainNavItems[0].href : '/';
 </script>
 
 <template>
@@ -55,8 +56,8 @@ const mainNavItems: NavItem[] = [
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>
-            <Link :href="route('dashboard')">
-            <AppLogo />
+            <Link :href="firstAvailableHref">
+              <AppLogo />
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>

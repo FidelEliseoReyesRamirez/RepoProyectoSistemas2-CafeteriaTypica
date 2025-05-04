@@ -46,6 +46,8 @@ const pedidoSeleccionado = computed(() => {
     return orders.value.find(o => o.id_pedido === selectedOrder.value);
 });
 
+const tiempoCancelacionMinutos = computed(() => page.props.config?.tiempo_cancelacion_minutos ?? 5);
+
 const puedeCancelar = (orderDate: string): boolean => {
     if (!authUser.value) return false;
     const rol = authUser.value.id_rol;
@@ -53,10 +55,12 @@ const puedeCancelar = (orderDate: string): boolean => {
     if (rol === 2) {
         const fechaPedido = new Date(orderDate).getTime();
         const ahora = new Date().getTime();
-        return (ahora - fechaPedido) < 5 * 60 * 1000;
+        const limite = tiempoCancelacionMinutos.value * 60 * 1000;
+        return (ahora - fechaPedido) < limite;
     }
     return false;
 };
+
 
 const actualizarPedidos = async () => {
     try {
@@ -86,6 +90,33 @@ onMounted(() => {
 onUnmounted(() => {
     clearInterval(intervaloActualizacion);
 });
+const showCancelarModal = ref(false);
+const showRehacerModal = ref(false);
+const pedidoConfirmacionId = ref<number | null>(null);
+const confirmarCancelar = (id: number) => {
+    pedidoConfirmacionId.value = id;
+    showCancelarModal.value = true;
+};
+
+const confirmarRehacer = (id: number) => {
+    pedidoConfirmacionId.value = id;
+    showRehacerModal.value = true;
+};
+
+const cancelarPedido = () => {
+    if (!pedidoConfirmacionId.value) return;
+    router.put(`/order/${pedidoConfirmacionId.value}/cancelar`);
+    showCancelarModal.value = false;
+    pedidoConfirmacionId.value = null;
+};
+
+const rehacerPedido = () => {
+    if (!pedidoConfirmacionId.value) return;
+    router.put(`/order/${pedidoConfirmacionId.value}/rehacer`);
+    showRehacerModal.value = false;
+    pedidoConfirmacionId.value = null;
+};
+
 </script>
 
 <template>
@@ -141,12 +172,18 @@ onUnmounted(() => {
                             </button>
 
 
-                            <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'" @click="() => { }"
+                            <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'"
+                                @click="confirmarCancelar(order.id_pedido)"
                                 class="text-white text-xs px-3 py-1 rounded shadow" :class="puedeCancelar(order.fecha_hora_registro) && !['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
                                     ? 'bg-red-600 hover:bg-red-700'
                                     : 'bg-gray-400 cursor-not-allowed'"
                                 :disabled="!puedeCancelar(order.fecha_hora_registro) || ['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
                                 Cancelar
+                            </button>
+                            <button v-if="order.estadopedido.nombre_estado === 'Cancelado'"
+                                @click="confirmarRehacer(order.id_pedido)"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1 rounded shadow">
+                                Restaurar
                             </button>
                         </div>
                     </div>
@@ -191,6 +228,37 @@ onUnmounted(() => {
                     <button @click="cerrarResumen"
                         class="px-4 py-2 rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
                         Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div v-if="showCancelarModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl w-full max-w-md">
+                <h2 class="text-lg font-bold mb-4">¿Cancelar pedido?</h2>
+                <p class="text-sm mb-4">Una vez cancelado, este pedido ya no será procesado. ¿Está seguro?</p>
+                <div class="flex justify-end gap-2">
+                    <button @click="showCancelarModal = false"
+                        class="px-4 py-2 border rounded hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
+                        No
+                    </button>
+                    <button @click="cancelarPedido" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+                        Sí, cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div v-if="showRehacerModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl w-full max-w-md">
+                <h2 class="text-lg font-bold mb-4">¿Rehacer pedido?</h2>
+                <p class="text-sm mb-4">El pedido se reenviará a cocina y será marcado como pendiente. ¿Está seguro?</p>
+                <div class="flex justify-end gap-2">
+                    <button @click="showRehacerModal = false"
+                        class="px-4 py-2 border rounded hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
+                        No
+                    </button>
+                    <button @click="rehacerPedido"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">
+                        Sí, rehacer
                     </button>
                 </div>
             </div>

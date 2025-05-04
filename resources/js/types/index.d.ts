@@ -12,8 +12,12 @@ export interface PageProps extends InertiaPageProps {
   auth: {
     user: User | null;
   };
-  roles?: Rol[]; 
+  roles?: Rol[];
+  config?: {
+    tiempo_cancelacion_minutos: number;
+  };
 }
+
 
 export interface User {
   id_usuario: number;

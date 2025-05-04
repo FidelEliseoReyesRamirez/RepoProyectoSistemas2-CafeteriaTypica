@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
+
 
 Route::get('/', function () {
     return Redirect::route('login');
@@ -71,6 +73,8 @@ Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
     ->name('orders.my');
     Route::get('/order/edit/{id}', [PedidoController::class, 'editar'])->name('order.edit');
     Route::put('/order/{id}', [PedidoController::class, 'actualizar'])->name('order.update');
+    Route::put('/order/{id}/cancelar', [PedidoController::class, 'cancelar'])->name('pedido.cancelar');
+    Route::put('/order/{id}/rehacer', [PedidoController::class, 'rehacer']);
 
 
 });
@@ -88,3 +92,16 @@ Route::middleware('auth')->get('/api/my-orders', function () {
     return response()->json(['orders' => $orders]);
 });
 
+
+//CONFIGURACIONES PARA DASHBOARD
+Route::put('/config/tiempo-cancelacion', function (Request $request) {
+    $minutos = (int) $request->minutos;
+    cache()->put('tiempo_cancelacion_minutos', $minutos);
+    return response()->json(['success' => true]);
+})->middleware('auth', 'is_admin');
+
+Route::middleware(['auth', 'is_admin'])->group(function () {
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
+});

@@ -4,24 +4,36 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\Response;
 
 class IsAdmin
 {
     /**
      * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
 
-        if (!$user || $user->id_rol !== 1) {
-            abort(403, 'Solo los administradores pueden acceder.');
+        if (!$user) {
+            return redirect()->route('login');
         }
 
-        return $next($request);
+        if ($user->id_rol === 1) {
+            return $next($request); // Es admin, continúa
+        }
+
+        // Redirigir al primer módulo disponible según el rol
+        return redirect($this->rutaDisponiblePorRol($user->id_rol));
+    }
+
+    protected function rutaDisponiblePorRol(int $rol): string
+    {
+        return match ($rol) {
+            2 => route('order.index'),       // Mesero
+            3 => route('productos.index'),   // Cocina
+            default => '/',                  // Ruta fallback
+        };
     }
 }
