@@ -69,6 +69,11 @@ const estaEnHorario = (): boolean => {
 };
 
 
+onMounted(() => {
+  console.log('Estados cancelables:', estadosCancelables.value);
+  console.log('Estados editables:', estadosEditables.value);
+  console.log('Tiempos por estado:', tiemposPorEstado.value);
+});
 
 
 const puedeCancelar = (orderDate: string, estado: string): boolean => {
@@ -292,17 +297,22 @@ const pedidosFiltrados = computed(() => {
                                 class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded shadow">
                                 Ver resumen
                             </button>
+<!-- Editar solo si permitido -->
+<button
+  v-if="puedeEditar(order.fecha_hora_registro, order.estadopedido.nombre_estado)"
+  @click="confirmarEditar(order.id_pedido)"
+  class="bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-3 py-1 rounded shadow">
+  Editar
+</button>
 
-                            <button @click="confirmarEditar(order.id_pedido)"
-                                class="bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-3 py-1 rounded shadow">
-                                Editar
-                            </button>
+<!-- Cancelar solo si permitido -->
+<button
+  v-if="order.estadopedido.nombre_estado !== 'Cancelado' && puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)"
+  @click="confirmarCancelar(order.id_pedido)"
+  class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow">
+  Cancelar
+</button>
 
-                            <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'"
-                                @click="confirmarCancelar(order.id_pedido)"
-                                class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow">
-                                Cancelar
-                            </button>
 
                             <button v-if="order.estadopedido.nombre_estado === 'Cancelado'"
                                 @click="confirmarRehacer(order.id_pedido)"
