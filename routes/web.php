@@ -109,14 +109,3 @@ Route::middleware(['auth', 'is_admin'])->group(function () {
     })->name('dashboard');
 });
 
-//CONFIGURACIONES PARA ESTADOS
-use App\Http\Controllers\ConfigController;
-use App\Http\Middleware\IsAdmin;
-Route::middleware(['auth'])->group(function () {
-    Route::middleware(['auth', IsAdmin::class])->group(function () {
-        Route::get('/config', [ConfigController::class, 'index'])->name('config.index');
-    });
-    Route::put('/config/tiempo-cancelacion', [ConfigController::class, 'actualizarTiempoCancelacion']);
-    Route::put('/config/tiempo-edicion', [ConfigController::class, 'actualizarTiempoEdicion']);
-    Route::put('/config/estados', [ConfigController::class, 'actualizarEstados']);
-});
