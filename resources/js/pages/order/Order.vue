@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
+const page = usePage();
 
 // Tipado Producto
 interface Producto {
@@ -37,6 +38,19 @@ const modalMessage = ref('');
 
 // Modal Resumen
 const showResumen = ref(false);
+
+//Modal envio correcto
+const showSuccessModal = ref(false);
+const showErrorModal = ref(false);
+const recargarPagina = () => {
+    window.location.reload();
+};
+
+watch(() => page.props.error, (val: unknown) => {
+    if (val) {
+        showErrorModal.value = true;
+    }
+});
 
 // Filtros
 const filtro = ref('');
@@ -98,20 +112,24 @@ const enviarPedido = () => {
         }))
     };
 
+    const onSuccess = () => {
+        carrito.value = [];
+        localStorage.removeItem('carrito_pedido');
+        showSuccessModal.value = true;
+    };
+
+    const onError = (errors: Record<string, string>) => {
+        if (errors.stock) {
+            abrirModalError(errors.stock);
+        } else {
+            abrirModalError('Ocurrió un error inesperado. Intente nuevamente.');
+        }
+    };
+
     if (props.pedidoId) {
-        router.put(`/order/${props.pedidoId}`, payload, {
-            onSuccess: () => {
-                carrito.value = [];
-                localStorage.removeItem('carrito_pedido');
-            }
-        });
+        router.put(`/order/${props.pedidoId}`, payload, { onSuccess, onError });
     } else {
-        router.post('/order', payload, {
-            onSuccess: () => {
-                carrito.value = [];
-                localStorage.removeItem('carrito_pedido');
-            }
-        });
+        router.post('/order', payload, { onSuccess, onError });
     }
 };
 
@@ -215,9 +233,6 @@ const total = computed(() =>
     <AppLayout>
 
         <Head title="Crear Pedido" />
-        <h1 class="text-2xl font-bold mb-4 text-[#593E25] dark:text-[#d9a679]">
-            {{ props.pedidoId ? 'Editar Pedido' : 'Ordenar productos' }}
-        </h1>
 
         <div class="w-full px-4 sm:px-6 text-[#4b3621] dark:text-white overflow-x-hidden max-w-full">
             <h1 class="text-2xl font-bold mb-4 text-[#593E25] dark:text-[#d9a679]">Ordenar productos</h1>
@@ -374,6 +389,31 @@ const total = computed(() =>
                     <button @click="cerrarModalError"
                         class="px-4 py-2 bg-[#a47148] hover:bg-[#8c5c3b] text-white rounded">
                         Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Modal de Éxito -->
+        <div v-if="showSuccessModal"
+            class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            @click.self="() => { showSuccessModal = false; router.visit('/my-orders'); }">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg w-full max-w-sm shadow-xl text-center">
+                <h2 class="text-lg font-bold text-green-600 dark:text-green-400 mb-4">¡Pedido enviado!</h2>
+                <p class="text-sm mb-6">El pedido fue registrado y enviado correctamente a cocina.</p>
+                <button @click="() => { showSuccessModal = false; router.visit('/my-orders'); }"
+                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">
+                    Ver mis pedidos
+                </button>
+            </div>
+        </div>
+        <div v-if="showErrorModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <div class="bg-white dark:bg-[#2c211b] rounded-lg shadow-xl p-6 max-w-md w-full">
+                <h2 class="text-lg font-bold text-red-600 mb-2">Error</h2>
+                <p class="text-sm mb-4">Ocurrió un error inesperado. Intente nuevamente.</p>
+                <div class="flex justify-end">
+                    <button @click="recargarPagina"
+                        class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                        Recargar
                     </button>
                 </div>
             </div>

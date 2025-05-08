@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import type { PageProps } from '@/types';
 
 const page = usePage<PageProps>();
 const authUser = computed(() => page.props.auth?.user ?? null);
+
 
 const props = defineProps<{
     orders: {
@@ -232,6 +233,7 @@ const rehacerPedido = () => {
                 </div>
             </div>
         </div>
+
         <div v-if="showCancelarModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
             <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl w-full max-w-md">
                 <h2 class="text-lg font-bold mb-4">¿Cancelar pedido?</h2>
@@ -247,6 +249,8 @@ const rehacerPedido = () => {
                 </div>
             </div>
         </div>
+        
+
         <div v-if="showRehacerModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
             <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl w-full max-w-md">
                 <h2 class="text-lg font-bold mb-4">¿Rehacer pedido?</h2>
