@@ -96,16 +96,14 @@ Route::middleware('auth')->get('/api/my-orders', function (Request $request) {
 
 
 
-//CONFIGURACIONES PARA DASHBOARD
-Route::put('/config/tiempo-cancelacion', function (Request $request) {
-    $minutos = (int) $request->minutos;
-    cache()->put('tiempo_cancelacion_minutos', $minutos);
-    return response()->json(['success' => true]);
-})->middleware('auth', 'is_admin');
+//CONFIGURACIONES
+use App\Http\Controllers\ConfiguracionController;
+
+Route::get('/configuracion', [ConfiguracionController::class, 'index'])->name('config.index');
+Route::post('/configuracion', [ConfiguracionController::class, 'update'])->name('config.update');
+
 
 Route::middleware(['auth', 'is_admin'])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/config', [ConfiguracionController::class, 'index'])->name('config.index');
+    Route::post('/configuracion', [ConfiguracionController::class, 'update'])->name('config.update');
 });
-
