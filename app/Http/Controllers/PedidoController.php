@@ -13,7 +13,8 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use App\Models\ConfigEstadoPedido;
-
+use App\Models\ConfigHorarioAtencion;
+use Carbon\Carbon;
 class PedidoController extends Controller
 {
     public function crear()
@@ -35,6 +36,19 @@ class PedidoController extends Controller
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
             'items.*.comentario' => ['nullable', 'string'],
         ]);
+    
+        // Validar horario de atención
+        $ahora = Carbon::now();
+        $dia = ucfirst($ahora->locale('es')->isoFormat('dddd')); // Ej: 'Lunes'
+        $hora = $ahora->format('H:i:s');
+    
+        $horario = ConfigHorarioAtencion::where('dia', $dia)->first();
+    
+        if (!$horario || $hora < $horario->hora_inicio || $hora > $horario->hora_fin) {
+            return redirect()->back()->withErrors([
+                'fuera_horario' => 'No se pueden realizar pedidos fuera del horario de atención.',
+            ]);
+        }
 
         try {
             DB::transaction(function () use ($request) {

@@ -108,3 +108,8 @@ Route::middleware(['auth', 'is_admin'])->group(function () {
     Route::post('/configuracion', [ConfiguracionController::class, 'update'])->name('config.update');
 });
 Route::get('/api/my-orders', [PedidoController::class, 'myOrdersJson']);
+use App\Http\Controllers\ConfigHorarioAtencionController;
+
+
+Route::get('/config/horarios', [ConfigHorarioAtencionController::class, 'index']);
+Route::post('/config/horarios', [ConfigHorarioAtencionController::class, 'update']);

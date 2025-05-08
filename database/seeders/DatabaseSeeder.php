@@ -26,7 +26,8 @@ class DatabaseSeeder extends Seeder
             ProductoSeeder::class,
             RolSeeder::class,
             UsuarioSeeder::class,
-            ConfigEstadoPedidosSeeder::class
+            ConfigEstadoPedidosSeeder::class,
+            ConfigHorariosAtencionSeeder::class,
         ]);
     }
 }

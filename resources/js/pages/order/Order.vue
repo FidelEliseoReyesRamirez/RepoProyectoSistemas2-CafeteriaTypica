@@ -120,12 +120,14 @@ const enviarPedido = () => {
         showSuccessModal.value = true;
     };
 
-
-    const onError = (errors: Record<string, string>) => {
-        if (errors.stock) {
+    const onError = (errors: any) => {
+        if (errors?.fuera_horario) {
+            mensajeHorario.value = errors.fuera_horario;
+            showHorarioModal.value = true;
+        } else if (errors?.stock) {
             abrirModalError(errors.stock);
         } else {
-            abrirModalError('Ocurrió un error inesperado. Intente nuevamente.');
+            showErrorModal.value = true;
         }
     };
 
@@ -143,6 +145,7 @@ const enviarPedido = () => {
         });
     }
 };
+
 
 
 
@@ -243,6 +246,19 @@ watch(carrito, (nuevo) => {
 const total = computed(() =>
     carrito.value.reduce((sum, p) => sum + p.precio * p.cantidad, 0)
 );
+const showHorarioModal = ref(false);
+const mensajeHorario = ref('');
+onMounted(() => {
+    // ... ya existente
+
+    const errores = page.props.errors as Record<string, string>;
+
+    if (errores?.fuera_horario) {
+        mensajeHorario.value = errores.fuera_horario;
+        showHorarioModal.value = true;
+    }
+});
+
 </script>
 
 <template>
@@ -438,5 +454,20 @@ const total = computed(() =>
                 </div>
             </div>
         </div>
+        <!-- Modal de Horario Fuera de Rango -->
+        <div v-if="showHorarioModal"
+            class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg w-full max-w-sm shadow-xl text-center">
+                <h2 class="text-lg font-bold text-yellow-600 dark:text-yellow-400 mb-4">⏰ Fuera del horario</h2>
+                <p class="text-sm mb-6">{{ mensajeHorario }}</p>
+                <div class="flex justify-center">
+                    <button @click="showHorarioModal = false"
+                        class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded">
+                        Aceptar
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </AppLayout>
 </template>
