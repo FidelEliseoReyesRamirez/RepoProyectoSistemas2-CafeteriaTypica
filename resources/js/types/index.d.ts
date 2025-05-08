@@ -14,9 +14,20 @@ export interface PageProps extends InertiaPageProps {
   };
   roles?: Rol[];
   config?: {
-    tiempo_cancelacion_minutos: number;
+    estados_cancelables?: string[];
+    estados_editables?: string[];
+    tiempo_cancelacion_minutos?: number;
+    tiempo_edicion_minutos?: number;
+    tiempos_por_estado?: {
+      [estado: string]: {
+        cancelar: number;
+        editar: number;
+      };
+    };
   };
-}
+  now?: string;
+};
+
 
 
 export interface User {

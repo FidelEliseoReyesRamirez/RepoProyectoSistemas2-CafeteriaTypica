@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { PageProps } from '@/types';
 
 const page = usePage<PageProps>();
 const authUser = computed(() => page.props.auth?.user ?? null);
 
+// Ahora como ref porque los vamos a actualizar con el fetch
+const estadosCancelables = ref<string[]>(page.props.config?.estados_cancelables ?? []);
+const estadosEditables = ref<string[]>(page.props.config?.estados_editables ?? []);
+const tiemposPorEstado = ref<Record<string, { cancelar: number; editar: number }>>(page.props.config?.tiempos_por_estado ?? {});
+const serverNow = ref(new Date(page.props.now ?? new Date().toISOString()).getTime());
 
 const props = defineProps<{
     orders: {
@@ -47,21 +52,29 @@ const pedidoSeleccionado = computed(() => {
     return orders.value.find(o => o.id_pedido === selectedOrder.value);
 });
 
-const tiempoCancelacionMinutos = computed(() => page.props.config?.tiempo_cancelacion_minutos ?? 5);
-
-const puedeCancelar = (orderDate: string): boolean => {
+const puedeCancelar = (orderDate: string, estado: string): boolean => {
     if (!authUser.value) return false;
     const rol = authUser.value.id_rol;
+    if (!estadosCancelables.value.includes(estado)) return false;
     if (rol === 1) return true;
-    if (rol === 2) {
-        const fechaPedido = new Date(orderDate).getTime();
-        const ahora = new Date().getTime();
-        const limite = tiempoCancelacionMinutos.value * 60 * 1000;
-        return (ahora - fechaPedido) < limite;
-    }
-    return false;
+
+    const fechaPedido = new Date(orderDate).getTime();
+    const limite = (tiemposPorEstado.value[estado]?.cancelar ?? 0) * 60 * 1000;
+
+    return limite === 0 || (serverNow.value - fechaPedido) <= limite;
 };
 
+const puedeEditar = (orderDate: string, estado: string): boolean => {
+    if (!authUser.value) return false;
+    const rol = authUser.value.id_rol;
+    if (!estadosEditables.value.includes(estado)) return false;
+    if (rol === 1) return true;
+
+    const fechaPedido = new Date(orderDate).getTime();
+    const limite = (tiemposPorEstado.value[estado]?.editar ?? 0) * 60 * 1000;
+
+    return limite === 0 || (serverNow.value - fechaPedido) <= limite;
+};
 
 const actualizarPedidos = async () => {
     try {
@@ -74,6 +87,10 @@ const actualizarPedidos = async () => {
         }
 
         orders.value = data.orders;
+        serverNow.value = new Date(data.now).getTime();
+        estadosCancelables.value = data.config.estados_cancelables;
+        estadosEditables.value = data.config.estados_editables;
+        tiemposPorEstado.value = data.config.tiempos_por_estado;
     } catch (error) {
         console.error('Error actualizando pedidos:', error);
     }
@@ -91,9 +108,11 @@ onMounted(() => {
 onUnmounted(() => {
     clearInterval(intervaloActualizacion);
 });
+
 const showCancelarModal = ref(false);
 const showRehacerModal = ref(false);
 const pedidoConfirmacionId = ref<number | null>(null);
+
 const confirmarCancelar = (id: number) => {
     pedidoConfirmacionId.value = id;
     showCancelarModal.value = true;
@@ -117,6 +136,7 @@ const rehacerPedido = () => {
     showRehacerModal.value = false;
     pedidoConfirmacionId.value = null;
 };
+
 const filtroNumero = ref('');
 const filtroEstado = ref('');
 const filtroTiempo = ref('');
@@ -160,8 +180,11 @@ const pedidosFiltrados = computed(() => {
         return coincideNumero && coincideEstado && coincideTiempo;
     });
 });
+console.log('Tiempos por estado:', tiemposPorEstado.value);
+
 
 </script>
+
 
 <template>
     <AppLayout>
@@ -237,20 +260,20 @@ const pedidosFiltrados = computed(() => {
                             </button>
 
                             <button @click="router.visit(`/order/edit/${order.id_pedido}`, { preserveState: true })"
-                                class="text-white text-xs px-3 py-1 rounded shadow" :class="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : 'bg-yellow-600 hover:bg-yellow-700'"
-                                :disabled="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
+                                class="text-white text-xs px-3 py-1 rounded shadow" :class="puedeEditar(order.fecha_hora_registro, order.estadopedido.nombre_estado)
+                                    ? 'bg-yellow-600 hover:bg-yellow-700'
+                                    : 'bg-gray-400 cursor-not-allowed'"
+                                :disabled="!puedeEditar(order.fecha_hora_registro, order.estadopedido.nombre_estado)">
                                 Editar
                             </button>
 
-
                             <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'"
-                                @click="confirmarCancelar(order.id_pedido)"
-                                class="text-white text-xs px-3 py-1 rounded shadow" :class="puedeCancelar(order.fecha_hora_registro) && !['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
-                                    ? 'bg-red-600 hover:bg-red-700'
-                                    : 'bg-gray-400 cursor-not-allowed'"
-                                :disabled="!puedeCancelar(order.fecha_hora_registro) || ['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)">
+                                @click="confirmarCancelar(order.id_pedido)" :class="[
+                                    'text-white text-xs px-3 py-1 rounded shadow',
+                                    puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)
+                                        ? 'bg-red-600 hover:bg-red-700'
+                                        : 'bg-gray-400 cursor-not-allowed'
+                                ]" :disabled="!puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)">
                                 Cancelar
                             </button>
                             <button v-if="order.estadopedido.nombre_estado === 'Cancelado'"

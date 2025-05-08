@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Models\ConfigEstadoPedido;
 
 class PedidoController extends Controller
 {
@@ -41,10 +42,11 @@ class PedidoController extends Controller
                     ->where('eliminado', 0)
                     ->firstOrFail();
 
-                $pedido = Pedido::create([
-                    'id_usuario_mesero' => Auth::id(),
-                    'estado_actual' => $estadoInicial->id_estado,
-                ]);
+                    $pedido = Pedido::create([
+                        'id_usuario_mesero' => Auth::id(),
+                        'estado_actual' => $estadoInicial->id_estado,
+                        'fecha_hora_registro' => now(), 
+                    ]);
 
                 $productosDescripcion = [];
                 $totalPedido = 0;
@@ -105,8 +107,21 @@ class PedidoController extends Controller
             ->orderByDesc('fecha_hora_registro')
             ->get();
 
+        $config = ConfigEstadoPedido::all();
+
         return Inertia::render('order/MyOrders', [
             'orders' => $orders,
+            'now' => now()->toISOString(), // hora del servidor
+            'config' => [
+                'estados_cancelables' => $config->where('puede_cancelar', true)->pluck('estado')->values(),
+                'estados_editables' => $config->where('puede_editar', true)->pluck('estado')->values(),
+                'tiempos_por_estado' => $config->mapWithKeys(fn($item) => [
+                    $item->estado => [
+                        'cancelar' => $item->tiempo_cancelacion_minutos,
+                        'editar' => $item->tiempo_edicion_minutos,
+                    ]
+                ]),
+            ],
         ]);
     }
 
@@ -219,7 +234,6 @@ class PedidoController extends Controller
                 );
             });
             return back()->with('success', 'Pedido actualizado correctamente.');
-
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Ocurrió un error inesperado. Intente nuevamente.');
         }
@@ -290,4 +304,31 @@ class PedidoController extends Controller
             'eliminado' => 0,
         ]);
     }
+    public function myOrdersJson()
+{
+    $userId = Auth::id();
+
+    $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
+        ->where('id_usuario_mesero', $userId)
+        ->orderByDesc('fecha_hora_registro')
+        ->get();
+
+    $config = ConfigEstadoPedido::all();
+
+    return response()->json([
+        'orders' => $orders,
+        'now' => now()->toISOString(),
+        'config' => [
+            'estados_cancelables' => $config->where('puede_cancelar', true)->pluck('estado')->values(),
+            'estados_editables' => $config->where('puede_editar', true)->pluck('estado')->values(),
+            'tiempos_por_estado' => $config->mapWithKeys(fn($item) => [
+                $item->estado => [
+                    'cancelar' => $item->tiempo_cancelacion_minutos,
+                    'editar' => $item->tiempo_edicion_minutos,
+                ]
+            ]),
+        ],
+    ]);
+}
+
 }
