@@ -117,6 +117,49 @@ const rehacerPedido = () => {
     showRehacerModal.value = false;
     pedidoConfirmacionId.value = null;
 };
+const filtroNumero = ref('');
+const filtroEstado = ref('');
+const filtroTiempo = ref('');
+
+const estadosDisponibles = computed(() => {
+    return [...new Set(props.orders.map(order => order.estadopedido.nombre_estado))];
+});
+
+const filtrarPorTiempo = (fecha: string) => {
+    const ahora = new Date();
+    const fechaPedido = new Date(fecha);
+
+    switch (filtroTiempo.value) {
+        case 'ultima_hora':
+            return ahora.getTime() - fechaPedido.getTime() <= 60 * 60 * 1000;
+        case 'ultimas_2':
+            return ahora.getTime() - fechaPedido.getTime() <= 2 * 60 * 60 * 1000;
+        case 'hoy':
+            return fechaPedido.toDateString() === ahora.toDateString();
+        case 'ultimas_24':
+            return ahora.getTime() - fechaPedido.getTime() <= 24 * 60 * 60 * 1000;
+        case 'ultimos_2_dias':
+            return ahora.getTime() - fechaPedido.getTime() <= 2 * 24 * 60 * 60 * 1000;
+        case 'ultima_semana':
+            return ahora.getTime() - fechaPedido.getTime() <= 7 * 24 * 60 * 60 * 1000;
+        case 'este_mes':
+            return (
+                fechaPedido.getMonth() === ahora.getMonth() &&
+                fechaPedido.getFullYear() === ahora.getFullYear()
+            );
+        default:
+            return true;
+    }
+};
+
+const pedidosFiltrados = computed(() => {
+    return orders.value.filter(order => {
+        const coincideNumero = !filtroNumero.value || order.id_pedido.toString().includes(filtroNumero.value);
+        const coincideEstado = !filtroEstado.value || order.estadopedido.nombre_estado === filtroEstado.value;
+        const coincideTiempo = filtrarPorTiempo(order.fecha_hora_registro);
+        return coincideNumero && coincideEstado && coincideTiempo;
+    });
+});
 
 </script>
 
@@ -132,9 +175,38 @@ const rehacerPedido = () => {
                     Volver a ordenar
                 </button>
             </div>
+            <div class="mb-6 flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-center">
+                <!-- Búsqueda por número -->
+                <input v-model="filtroNumero" type="text" placeholder="Buscar por # de pedido"
+                    class="border text-black rounded px-3 py-2 text-sm w-full md:w-48" />
+
+                <!-- Filtrar por estado -->
+                <select v-model="filtroEstado" class="border text-black rounded px-3 py-2 text-sm w-full md:w-48">
+                    <option value="">Todos los estados</option>
+                    <option v-for="estado in estadosDisponibles" :key="estado" :value="estado">{{ estado }}</option>
+                </select>
+
+                <!-- Filtrar por tiempo -->
+                <select v-model="filtroTiempo" class="border text-black rounded px-3 py-2 text-sm w-full md:w-48">
+                    <option value="">Todo el tiempo</option>
+                    <option value="ultima_hora">Última hora</option>
+                    <option value="ultimas_2">Últimas 2 horas</option>
+                    <option value="hoy">Hoy</option>
+                    <option value="ultimas_24">Últimas 24 horas</option>
+                    <option value="ultimos_2_dias">Últimos 2 días</option>
+                    <option value="ultima_semana">Últimos 7 días</option>
+                    <option value="este_mes">Este mes</option>
+                </select>
+
+                <!-- Botón para limpiar filtros -->
+                <button @click="() => { filtroNumero = ''; filtroEstado = ''; filtroTiempo = '' }"
+                    class="text-xs bg-red-500 hover:bg-red-600 text-white rounded px-3 py-2">
+                    Limpiar filtros
+                </button>
+            </div>
 
             <div v-if="orders.length">
-                <div v-for="order in orders" :key="order.id_pedido"
+                <div v-for="order in pedidosFiltrados" :key="order.id_pedido"
                     class="mb-4 p-4 rounded shadow border border-[#d8c6ad] dark:border-[#6c4f3c] relative overflow-hidden"
                     :style="{ backgroundColor: order.estadopedido.color_codigo + '22' }">
                     <div class="absolute top-0 left-0 h-full w-2"
@@ -191,7 +263,8 @@ const rehacerPedido = () => {
                 </div>
             </div>
 
-            <p v-else class="text-sm text-gray-600">No tienes pedidos registrados.</p>
+            <p v-else class="text-sm text-gray-600">No se encontraron pedidos con los filtros aplicados.</p>
+
         </div>
 
         <!-- Modal -->
@@ -249,7 +322,7 @@ const rehacerPedido = () => {
                 </div>
             </div>
         </div>
-        
+
 
         <div v-if="showRehacerModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
             <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl w-full max-w-md">
