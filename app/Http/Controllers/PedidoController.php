@@ -252,13 +252,16 @@ class PedidoController extends Controller
                 $pedido->save();
 
                 $admin = Auth::user()->nombre;
+                $meseroOriginal = $pedido->usuario?->nombre ?? 'Sin asignar';
                 $detalleProductos = implode(', ', $productosDescripcion);
                 $totalPedidoFormatted = number_format($totalPedido, 2);
 
-                $this->registrarAuditoria(
-                    'Editar pedido',
-                    "$admin editó el pedido #{$pedido->id_pedido} con: $detalleProductos (Total: Bs $totalPedidoFormatted)"
-                );
+                $descripcion = "$admin editó el pedido #{$pedido->id_pedido} con: $detalleProductos (Total: Bs $totalPedidoFormatted)";
+                if (Auth::id() !== $pedido->id_usuario_mesero) {
+                    $descripcion .= " (Pedido creado originalmente por: $meseroOriginal)";
+                }
+
+                $this->registrarAuditoria('Editar pedido', $descripcion);
             });
             return back()->with('success', 'Pedido actualizado correctamente.');
         } catch (\Exception $e) {
@@ -285,13 +288,21 @@ class PedidoController extends Controller
 
         // Registrar auditoría
         $admin = Auth::user()?->nombre ?? 'Usuario';
+        $meseroOriginal = $pedido->usuario?->nombre ?? 'Sin asignar';
+
+        $descripcion = "$admin canceló el pedido #{$pedido->id_pedido}";
+        if (Auth::id() !== $pedido->id_usuario_mesero) {
+            $descripcion .= " (Pedido creado originalmente por: $meseroOriginal)";
+        }
+
         Auditorium::create([
             'id_usuario' => Auth::id(),
             'accion' => 'Cancelar pedido',
-            'descripcion' => "$admin canceló el pedido #{$pedido->id_pedido}",
+            'descripcion' => $descripcion,
             'fecha_hora' => now(),
             'eliminado' => 0,
         ]);
+
 
         return back()->with('success', 'Pedido cancelado correctamente.');
     }
@@ -310,13 +321,21 @@ class PedidoController extends Controller
         $pedido->update(['estado_actual' => $estadoPendiente->id_estado]);
 
         $admin = Auth::user()?->nombre ?? 'Usuario';
+        $meseroOriginal = $pedido->usuario?->nombre ?? 'Sin asignar';
+
+        $descripcion = "$admin reenvió el pedido #{$pedido->id_pedido} a cocina (estado: Pendiente)";
+        if (Auth::id() !== $pedido->id_usuario_mesero) {
+            $descripcion .= " (Pedido creado originalmente por: $meseroOriginal)";
+        }
+
         Auditorium::create([
             'id_usuario' => Auth::id(),
             'accion' => 'Rehacer pedido',
-            'descripcion' => "$admin reenvió el pedido #{$pedido->id_pedido} a cocina (estado: Pendiente)",
+            'descripcion' => $descripcion,
             'fecha_hora' => now(),
             'eliminado' => 0,
         ]);
+
 
         return back()->with('success', 'Pedido reenviado a cocina.');
     }
@@ -370,11 +389,29 @@ class PedidoController extends Controller
 
     public function allOrders()
     {
-        $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
+        $orders = Pedido::with(['detallepedidos.producto', 'estadopedido', 'usuario'])
             ->orderByDesc('fecha_hora_registro')
             ->get();
+        $orders->transform(function ($pedido) {
+            $pedidoArray = $pedido->toArray();
+            $pedidoArray['usuario_mesero'] = $pedido->usuario ?? [
+                'id_usuario' => null,
+                'nombre' => 'Sin asignar'
+            ];
+            unset($pedidoArray['usuario']);
+            return $pedidoArray;
+        });
 
         $config = ConfigEstadoPedido::all();
+
+        $horarios = ConfigHorarioAtencion::all()->mapWithKeys(function ($item) {
+            return [
+                strtolower($item->dia) => [
+                    'hora_inicio' => $item->hora_inicio,
+                    'hora_fin' => $item->hora_fin,
+                ],
+            ];
+        });
 
         return Inertia::render('order/AllOrders', [
             'orders' => $orders,
@@ -388,17 +425,42 @@ class PedidoController extends Controller
                         'editar' => $item->tiempo_edicion_minutos,
                     ]
                 ]),
+                'horario_atencion' => $horarios,
             ],
         ]);
     }
 
+
     public function allOrdersJson()
     {
-        $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
+        $orders = Pedido::with([
+            'detallepedidos.producto',
+            'estadopedido',
+            'usuario:id_usuario,nombre',
+        ])
             ->orderByDesc('fecha_hora_registro')
             ->get();
 
+        $orders->transform(function ($pedido) {
+            $pedidoArray = $pedido->toArray();
+            $pedidoArray['usuario_mesero'] = $pedido->usuario ?? [
+                'id_usuario' => null,
+                'nombre' => 'Sin asignar'
+            ];
+            unset($pedidoArray['usuario']);
+            return $pedidoArray;
+        });
+
         $config = ConfigEstadoPedido::all();
+
+        $horarios = ConfigHorarioAtencion::all()->mapWithKeys(function ($item) {
+            return [
+                strtolower($item->dia) => [
+                    'hora_inicio' => $item->hora_inicio,
+                    'hora_fin' => $item->hora_fin,
+                ],
+            ];
+        });
 
         return response()->json([
             'orders' => $orders,
@@ -412,6 +474,7 @@ class PedidoController extends Controller
                         'editar' => $item->tiempo_edicion_minutos,
                     ]
                 ]),
+                'horario_atencion' => $horarios,
             ],
         ]);
     }

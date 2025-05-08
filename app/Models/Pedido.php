@@ -32,6 +32,7 @@ class Pedido extends Model
 	protected $table = 'pedido';
 	protected $primaryKey = 'id_pedido';
 	public $timestamps = false;
+	public $usuario_mesero;
 
 	protected $casts = [
 		'id_usuario_mesero' => 'int',
