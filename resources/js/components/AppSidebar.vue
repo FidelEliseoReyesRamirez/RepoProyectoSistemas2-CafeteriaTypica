@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, UserPlus, Coffee, Utensils } from 'lucide-vue-next';
+import { LayoutGrid, UserPlus, Coffee, Utensils, Settings } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import type { PageProps } from '@/types';
 
@@ -33,6 +33,12 @@ const mainNavItems: NavItem[] = [
     icon: UserPlus,
   }] : []),
 
+  ...(authUser && authUser.id_rol === 1 ? [{
+    title: 'Configuración',
+    href: '/config',
+    icon: Settings,
+  }] : []),
+
   ...(authUser && [1, 3].includes(authUser.id_rol) ? [{
     title: 'Productos',
     href: route('productos.index'),
@@ -46,6 +52,7 @@ const mainNavItems: NavItem[] = [
   }] : []),
 ];
 
+
 // 👉 redirigir el logo al primer ítem permitido
 const firstAvailableHref = mainNavItems.length > 0 ? mainNavItems[0].href : '/';
 </script>
@@ -57,7 +64,7 @@ const firstAvailableHref = mainNavItems.length > 0 ? mainNavItems[0].href : '/';
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>
             <Link :href="firstAvailableHref">
-              <AppLogo />
+            <AppLogo />
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>

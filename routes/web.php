@@ -58,7 +58,6 @@ Route::middleware(['auth', 'verified', 'can_manage_productos'])->group(function 
     Route::put('/productos/{producto}/restore', [ProductoController::class, 'restore'])->name('productos.restore');
     Route::get('/productos/deleted', [ProductoController::class, 'deleted'])->name('productos.deleted');
     Route::put('/productos/{id}/actualizar-cantidad', [ProductoController::class, 'actualizarCantidad']);
-
 });
 
 
@@ -69,15 +68,14 @@ Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
     Route::get('/order', [PedidoController::class, 'crear'])->name('order.index');
     Route::post('/order', [PedidoController::class, 'guardar'])->name('order.store');
     Route::get('/my-orders', [PedidoController::class, 'myOrders'])
-    ->middleware(['auth'])
-    ->name('orders.my');
+        ->middleware(['auth'])
+        ->name('orders.my');
     Route::get('/order/edit/{id}', [PedidoController::class, 'editar'])->name('order.edit');
     Route::put('/order/{id}', [PedidoController::class, 'actualizar'])->name('order.update');
     Route::put('/order/{id}/cancelar', [PedidoController::class, 'cancelar'])->name('pedido.cancelar');
     Route::put('/order/{id}/rehacer', [PedidoController::class, 'rehacer']);
-
-
 });
+
 use Illuminate\Support\Facades\Auth;
 use App\Models\Pedido;
 
@@ -109,4 +107,16 @@ Route::middleware(['auth', 'is_admin'])->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
+});
+
+//CONFIGURACIONES PARA ESTADOS
+use App\Http\Controllers\ConfigController;
+use App\Http\Middleware\IsAdmin;
+Route::middleware(['auth'])->group(function () {
+    Route::middleware(['auth', IsAdmin::class])->group(function () {
+        Route::get('/config', [ConfigController::class, 'index'])->name('config.index');
+    });
+    Route::put('/config/tiempo-cancelacion', [ConfigController::class, 'actualizarTiempoCancelacion']);
+    Route::put('/config/tiempo-edicion', [ConfigController::class, 'actualizarTiempoEdicion']);
+    Route::put('/config/estados', [ConfigController::class, 'actualizarEstados']);
 });

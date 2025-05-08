@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Models\Configuracion;
+
+$minutosCancelacion = (int) Configuracion::obtener('tiempo_cancelacion_minutos', 5);
+$estadosCancelables = json_decode(Configuracion::obtener('estados_cancelables', '[]'), true);
 
 class PedidoController extends Controller
 {
