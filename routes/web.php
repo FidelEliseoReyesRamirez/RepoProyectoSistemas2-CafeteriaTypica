@@ -81,7 +81,11 @@ Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
 use Illuminate\Support\Facades\Auth;
 use App\Models\Pedido;
 
-Route::middleware('auth')->get('/api/my-orders', function () {
+Route::middleware('auth')->get('/api/my-orders', function (Request $request) {
+    if (!$request->expectsJson()) {
+        return redirect()->route('orders.my');
+    }
+
     $userId = Auth::id();
 
     $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
@@ -91,6 +95,7 @@ Route::middleware('auth')->get('/api/my-orders', function () {
 
     return response()->json(['orders' => $orders]);
 });
+
 
 
 //CONFIGURACIONES PARA DASHBOARD
