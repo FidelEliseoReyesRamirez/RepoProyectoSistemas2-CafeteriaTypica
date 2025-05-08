@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, UserPlus, Coffee, Utensils, Settings,ListChecks  } from 'lucide-vue-next';
+import { LayoutGrid, UserPlus, Coffee, Utensils, Settings,ListChecks, DollarSign  } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import type { PageProps } from '@/types';
 
@@ -55,6 +55,12 @@ const mainNavItems: NavItem[] = [
     href: '/all-orders',
     icon: ListChecks ,
   }] : []),
+  ...(authUser && [1, 4].includes(authUser.id_rol) ? [{
+  title: 'Caja',
+  href: '/cashier-orders',
+  icon: DollarSign,
+}] : []),
+
 ];
 
 

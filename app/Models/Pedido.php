@@ -58,7 +58,7 @@ class Pedido extends Model
 		return $this->belongsTo(Estadopedido::class, 'estado_actual', 'id_estado')
 			->select(['id_estado', 'nombre_estado', 'color_codigo']);
 	}
-	
+
 
 	public function detallepedidos()
 	{
@@ -73,5 +73,9 @@ class Pedido extends Model
 	public function pagos()
 	{
 		return $this->hasMany(Pago::class, 'id_pedido');
+	}
+	public function pago()
+	{
+		return $this->hasOne(Pago::class, 'id_pedido');
 	}
 }

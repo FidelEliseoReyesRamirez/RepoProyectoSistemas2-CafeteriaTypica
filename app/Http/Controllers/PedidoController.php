@@ -15,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 use App\Models\ConfigEstadoPedido;
 use App\Models\ConfigHorarioAtencion;
 use Carbon\Carbon;
+use App\Models\Pago;
 
 class PedidoController extends Controller
 {
@@ -476,6 +477,90 @@ class PedidoController extends Controller
                 ]),
                 'horario_atencion' => $horarios,
             ],
+        ]);
+    }
+    public function marcarComoPagado(Request $request, $id)
+    {
+        $request->validate([
+            'metodo_pago' => ['required', 'in:Efectivo,Tarjeta,QR'],
+        ]);
+
+        $pedido = Pedido::with('estadopedido')->findOrFail($id);
+
+        if ($pedido->estadopedido->nombre_estado === 'Pagado') {
+            return response()->json(['error' => 'Este pedido ya ha sido pagado.'], 422);
+        }
+
+        $estadoPagado = Estadopedido::where('nombre_estado', 'Pagado')->firstOrFail();
+
+        DB::transaction(function () use ($pedido, $request, $estadoPagado) {
+            $pedido->estado_actual = $estadoPagado->id_estado;
+            $pedido->save();
+
+            Pago::create([
+                'id_pedido' => $pedido->id_pedido,
+                'monto' => $pedido->detallepedidos->sum(fn($d) => $d->cantidad * $d->precio_unitario),
+                'metodo_pago' => $request->metodo_pago,
+                'fecha_pago' => now(),
+                'eliminado' => false,
+            ]);
+
+            $usuario = Auth::user()->nombre;
+            $descripcion = "$usuario marcó como pagado el pedido #{$pedido->id_pedido} usando {$request->metodo_pago}";
+            $this->registrarAuditoria('Pago de pedido', $descripcion);
+        });
+
+        return response()->json([
+            'nuevo_estado' => [
+                'nombre_estado' => $estadoPagado->nombre_estado,
+                'color_codigo' => $estadoPagado->color_codigo
+            ]
+        ]);
+    }
+
+    public function vistaCajero()
+    {
+        $orders = Pedido::with(['detallepedidos.producto', 'estadopedido', 'usuario'])
+            ->orderByDesc('fecha_hora_registro')
+            ->get();
+
+        $orders->transform(function ($pedido) {
+            $pedidoArray = $pedido->toArray();
+            $pedidoArray['usuario_mesero'] = $pedido->usuario ?? [
+                'id_usuario' => null,
+                'nombre' => 'Sin asignar',
+            ];
+            unset($pedidoArray['usuario']);
+            return $pedidoArray;
+        });
+
+        return Inertia::render('order/CashierOrders', [
+            'orders' => $orders,
+            'now' => now()->toISOString(),
+        ]);
+    }
+    public function marcarComoNoPagado($id)
+    {
+        $pedido = Pedido::with('estadopedido')->findOrFail($id);
+
+        if ($pedido->estadopedido->nombre_estado !== 'Pagado') {
+            return back()->with('error', 'El pedido no está marcado como pagado.');
+        }
+
+        DB::transaction(function () use ($pedido) {
+            $estadoModificado = Estadopedido::where('nombre_estado', 'Modificado')->firstOrFail();
+            $pedido->estado_actual = $estadoModificado->id_estado;
+            $pedido->save();
+
+            $admin = Auth::user()->nombre;
+            $this->registrarAuditoria('Rehacer pago', "$admin marcó como NO pagado el pedido #{$pedido->id_pedido}");
+        });
+
+        $nuevoEstado = Estadopedido::select('id_estado', 'nombre_estado', 'color_codigo')
+            ->where('nombre_estado', 'Modificado')->first();
+
+        return response()->json([
+            'nuevo_estado' => $nuevoEstado,
         ]);
     }
 }

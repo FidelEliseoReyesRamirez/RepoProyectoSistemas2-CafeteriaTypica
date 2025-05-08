@@ -116,3 +116,14 @@ use App\Http\Controllers\ConfigHorarioAtencionController;
 
 Route::get('/config/horarios', [ConfigHorarioAtencionController::class, 'index']);
 Route::post('/config/horarios', [ConfigHorarioAtencionController::class, 'update']);
+
+
+//PARA CAJERO O ADMIN
+use App\Http\Middleware\IsAdminOrCashier;
+
+Route::middleware(['auth', 'verified', IsAdminOrCashier::class])->group(function () {
+    Route::get('/cashier-orders', [PedidoController::class, 'vistaCajero'])->name('cashier.orders');
+    Route::post('/order/{id}/pagar', [PedidoController::class, 'marcarComoPagado'])->name('order.pagar');
+    Route::put('/order/{id}/no-pagado', [PedidoController::class, 'marcarComoNoPagado']);
+
+});
