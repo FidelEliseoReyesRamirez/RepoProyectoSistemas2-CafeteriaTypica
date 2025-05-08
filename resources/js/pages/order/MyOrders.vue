@@ -236,7 +236,7 @@ const pedidosFiltrados = computed(() => {
                                 Ver resumen
                             </button>
 
-                            <button @click="router.visit(`/order/edit/${order.id_pedido}`)"
+                            <button @click="router.visit(`/order/edit/${order.id_pedido}`, { preserveState: true })"
                                 class="text-white text-xs px-3 py-1 rounded shadow" :class="['Pagado', 'Cancelado'].includes(order.estadopedido.nombre_estado)
                                     ? 'bg-gray-400 cursor-not-allowed'
                                     : 'bg-yellow-600 hover:bg-yellow-700'"

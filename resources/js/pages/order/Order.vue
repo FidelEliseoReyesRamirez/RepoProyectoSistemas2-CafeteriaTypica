@@ -4,6 +4,8 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
 const page = usePage();
 
+
+
 // Tipado Producto
 interface Producto {
     id_producto: number;
@@ -118,6 +120,7 @@ const enviarPedido = () => {
         showSuccessModal.value = true;
     };
 
+
     const onError = (errors: Record<string, string>) => {
         if (errors.stock) {
             abrirModalError(errors.stock);
@@ -127,11 +130,20 @@ const enviarPedido = () => {
     };
 
     if (props.pedidoId) {
-        router.put(`/order/${props.pedidoId}`, payload, { onSuccess, onError });
+        router.put(`/order/${props.pedidoId}`, payload, {
+            onSuccess,
+            onError,
+            preserveScroll: true
+        });
     } else {
-        router.post('/order', payload, { onSuccess, onError });
+        router.post('/order', payload, {
+            onSuccess,
+            onError,
+            preserveScroll: true
+        });
     }
 };
+
 
 
 const cancelarPedido = () => {
@@ -198,7 +210,7 @@ onMounted(() => {
     if (props.carritoInicial) {
         carrito.value = props.carritoInicial.map(item => ({
             ...item,
-            comentario: item.comentario ?? '', // ← aquí se asegura que sea string
+            comentario: item.comentario ?? '',
         }));
     } else {
         const data = localStorage.getItem('carrito_pedido');
@@ -215,9 +227,13 @@ onMounted(() => {
             }
         }
     }
+
+    const flash = page.props.flash as { success?: string };
+
+    if (flash?.success && props.pedidoId) {
+        showSuccessModal.value = true;
+    }
 });
-
-
 
 watch(carrito, (nuevo) => {
     localStorage.setItem('carrito_pedido', JSON.stringify(nuevo));
@@ -395,15 +411,20 @@ const total = computed(() =>
         </div>
         <!-- Modal de Éxito -->
         <div v-if="showSuccessModal"
-            class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            @click.self="() => { showSuccessModal = false; router.visit('/my-orders'); }">
+            class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg w-full max-w-sm shadow-xl text-center">
                 <h2 class="text-lg font-bold text-green-600 dark:text-green-400 mb-4">¡Pedido enviado!</h2>
                 <p class="text-sm mb-6">El pedido fue registrado y enviado correctamente a cocina.</p>
-                <button @click="() => { showSuccessModal = false; router.visit('/my-orders'); }"
-                    class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">
-                    Ver mis pedidos
-                </button>
+                <div class="flex justify-center gap-4">
+                    <button @click="showSuccessModal = false"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">
+                        Aceptar
+                    </button>
+                    <button @click="router.visit('/my-orders')"
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+                        Ver mis pedidos
+                    </button>
+                </div>
             </div>
         </div>
         <div v-if="showErrorModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -411,8 +432,7 @@ const total = computed(() =>
                 <h2 class="text-lg font-bold text-red-600 mb-2">Error</h2>
                 <p class="text-sm mb-4">Ocurrió un error inesperado. Intente nuevamente.</p>
                 <div class="flex justify-end">
-                    <button @click="recargarPagina"
-                        class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                    <button @click="recargarPagina" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
                         Recargar
                     </button>
                 </div>

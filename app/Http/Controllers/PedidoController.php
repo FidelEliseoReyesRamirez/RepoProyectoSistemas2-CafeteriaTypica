@@ -218,7 +218,8 @@ class PedidoController extends Controller
                     "$admin editó el pedido #{$pedido->id_pedido} con: $detalleProductos (Total: Bs $totalPedidoFormatted)"
                 );
             });
-            return redirect()->route('orders.my')->with('success', 'Pedido actualizado correctamente.');
+            return back()->with('success', 'Pedido actualizado correctamente.');
+
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Ocurrió un error inesperado. Intente nuevamente.');
         }
