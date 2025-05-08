@@ -60,22 +60,26 @@ const puedeCancelar = (orderDate: string, estado: string): boolean => {
 
     const fechaPedido = new Date(orderDate).getTime();
     const limite = (tiemposPorEstado.value[estado]?.cancelar ?? 0) * 60 * 1000;
+    const diferencia = serverNow.value - fechaPedido;
 
-    return limite === 0 || (serverNow.value - fechaPedido) <= limite;
+    const resultado = limite === 0 || diferencia <= limite;
+
+    return resultado;
 };
-
 const puedeEditar = (orderDate: string, estado: string): boolean => {
     if (!authUser.value) return false;
     const rol = authUser.value.id_rol;
     if (!estadosEditables.value.includes(estado)) return false;
-    if (rol === 1) return true;
+    if (rol === 1) return true; //SUPER IMPORTANTE SI EL ROL ES DE ADMINISTRADOR SIEMPRE LO VA DEJAR EDITAR O CANCELAR FUERA DEL RANGO
 
     const fechaPedido = new Date(orderDate).getTime();
     const limite = (tiemposPorEstado.value[estado]?.editar ?? 0) * 60 * 1000;
+    const diferencia = serverNow.value - fechaPedido;
 
-    return limite === 0 || (serverNow.value - fechaPedido) <= limite;
+    const resultado = limite === 0 || diferencia <= limite;
+
+    return resultado;
 };
-
 const actualizarPedidos = async () => {
     try {
         const response = await fetch('/api/my-orders');
@@ -180,8 +184,6 @@ const pedidosFiltrados = computed(() => {
         return coincideNumero && coincideEstado && coincideTiempo;
     });
 });
-console.log('Tiempos por estado:', tiemposPorEstado.value);
-
 
 </script>
 
@@ -267,13 +269,16 @@ console.log('Tiempos por estado:', tiemposPorEstado.value);
                                 Editar
                             </button>
 
+
+
                             <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'"
                                 @click="confirmarCancelar(order.id_pedido)" :class="[
                                     'text-white text-xs px-3 py-1 rounded shadow',
                                     puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)
                                         ? 'bg-red-600 hover:bg-red-700'
                                         : 'bg-gray-400 cursor-not-allowed'
-                                ]" :disabled="!puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)">
+                                ]"
+                                :disabled="!puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)">
                                 Cancelar
                             </button>
                             <button v-if="order.estadopedido.nombre_estado === 'Cancelado'"
