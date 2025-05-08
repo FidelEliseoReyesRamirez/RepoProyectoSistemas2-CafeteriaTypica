@@ -61,12 +61,15 @@ const pedidoSeleccionado = computed(() => {
 
 const estaEnHorario = (): boolean => {
     const now = new Date();
-    const dia = now.toLocaleDateString('es-ES', { weekday: 'long' });
-    const h = horarioAtencion.value[dia];
+    const dia = now.toLocaleDateString('es-ES', { weekday: 'long' }).toLowerCase();
+    const h = horarioAtencion.value?.[dia];
     if (!h) return false;
     const horaActual = now.toTimeString().slice(0, 5);
     return horaActual >= h.hora_inicio.slice(0, 5) && horaActual <= h.hora_fin.slice(0, 5);
 };
+
+
+
 
 const puedeCancelar = (orderDate: string, estado: string): boolean => {
     if (!authUser.value || !estaEnHorario()) return false;

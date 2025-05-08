@@ -124,9 +124,19 @@ class PedidoController extends Controller
 
         $config = ConfigEstadoPedido::all();
 
+
+        $horarios = ConfigHorarioAtencion::all()->mapWithKeys(function ($item) {
+            return [
+                strtolower($item->dia) => [
+                    'hora_inicio' => $item->hora_inicio,
+                    'hora_fin' => $item->hora_fin,
+                ],
+            ];
+        });
+
         return Inertia::render('order/MyOrders', [
             'orders' => $orders,
-            'now' => now()->toISOString(), // hora del servidor
+            'now' => now()->toISOString(),
             'config' => [
                 'estados_cancelables' => $config->where('puede_cancelar', true)->pluck('estado')->values(),
                 'estados_editables' => $config->where('puede_editar', true)->pluck('estado')->values(),
@@ -136,9 +146,11 @@ class PedidoController extends Controller
                         'editar' => $item->tiempo_edicion_minutos,
                     ]
                 ]),
+                'horario_atencion' => $horarios,
             ],
         ]);
     }
+
 
     public function editar($id)
     {
@@ -330,6 +342,15 @@ class PedidoController extends Controller
 
         $config = ConfigEstadoPedido::all();
 
+        $horarios = ConfigHorarioAtencion::all()->mapWithKeys(function ($item) {
+            return [
+                strtolower($item->dia) => [
+                    'hora_inicio' => $item->hora_inicio,
+                    'hora_fin' => $item->hora_fin,
+                ],
+            ];
+        });
+
         return response()->json([
             'orders' => $orders,
             'now' => now()->toISOString(),
@@ -342,9 +363,11 @@ class PedidoController extends Controller
                         'editar' => $item->tiempo_edicion_minutos,
                     ]
                 ]),
+                'horario_atencion' => $horarios,
             ],
         ]);
     }
+
     public function allOrders()
     {
         $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
