@@ -125,5 +125,8 @@ Route::middleware(['auth', 'verified', IsAdminOrCashier::class])->group(function
     Route::get('/cashier-orders', [PedidoController::class, 'vistaCajero'])->name('cashier.orders');
     Route::post('/order/{id}/pagar', [PedidoController::class, 'marcarComoPagado'])->name('order.pagar');
     Route::put('/order/{id}/no-pagado', [PedidoController::class, 'marcarComoNoPagado']);
-
+    Route::get('/close-cash', [PedidoController::class, 'vistaCierreCaja'])->name('cierre.caja');
+    Route::get('/cierre-caja/resumen/{fecha}', [PedidoController::class, 'resumenPorFecha']);
+    Route::get('/cierre-caja/pedidos/{inicio}/{fin?}', [PedidoController::class, 'pedidosPorFecha']);
+  
 });

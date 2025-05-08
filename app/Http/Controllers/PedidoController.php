@@ -563,4 +563,67 @@ class PedidoController extends Controller
             'nuevo_estado' => $nuevoEstado,
         ]);
     }
+    public function vistaCierreCaja()
+    {
+        $fechas = Pedido::selectRaw('DATE(fecha_hora_registro) as fecha')
+            ->distinct()
+            ->orderBy('fecha', 'desc')
+            ->pluck('fecha');
+
+        return Inertia::render('order/CierreCaja', [
+            'fechas' => $fechas,
+        ]);
+    }
+
+    public function resumenPorFecha($fecha)
+    {
+        $pagos = Pago::with('pedido')
+            ->whereDate('fecha_pago', $fecha)
+            ->get();
+
+        $totales = [
+            'Efectivo' => 0,
+            'Tarjeta' => 0,
+            'QR' => 0,
+            'Total' => 0,
+        ];
+
+        foreach ($pagos as $pago) {
+            $metodo = $pago->metodo_pago;
+            $totales[$metodo] += $pago->monto;
+            $totales['Total'] += $pago->monto;
+        }
+
+        return response()->json($totales);
+    }
+    public function pedidosPorFecha($inicio, $fin = null)
+    {
+        $query = Pago::with('pedido.detallepedidos.producto')
+            ->when($fin, fn($q) => $q->whereBetween('fecha_pago', [$inicio, $fin]))
+            ->when(!$fin, fn($q) => $q->whereDate('fecha_pago', $inicio));
+
+        if (request()->filled('metodo')) {
+            $query->where('metodo_pago', request('metodo'));
+        }
+
+        $pagos = $query->get();
+
+        return response()->json($pagos->map(function ($pago) {
+            $pedido = $pago->pedido;
+
+            return [
+                'id_pedido' => $pedido?->id_pedido,
+                'monto' => $pago->monto ?? 0,
+                'fecha' => $pedido?->fecha_hora_registro,
+                'detalles' => $pedido?->detallepedidos->map(function ($detalle) {
+                    return [
+                        'producto' => $detalle->producto->nombre,
+                        'cantidad' => $detalle->cantidad,
+                        'comentario' => $detalle->comentario,
+                        'precio' => $detalle->precio_unitario,
+                    ];
+                }) ?? [],
+            ];
+        }));
+    }
 }

@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import type { PageProps } from '@/types';
+import axios from 'axios';
 
 const page = usePage<PageProps>();
 const serverNow = ref(new Date(page.props.now ?? new Date().toISOString()).getTime());
@@ -50,7 +51,7 @@ const cerrarResumen = () => {
 const pedidoSeleccionado = computed(() => {
     return orders.value.find(o => o.id_pedido === selectedOrder.value);
 });
-import axios from 'axios';
+
 const marcarComoPagado = async () => {
   if (!selectedOrder.value || !metodoPago.value) return;
   try {
@@ -83,9 +84,6 @@ const rehacerPago = async (id: number) => {
   }
 };
 
-
-
-
 const abrirPagoModal = (id: number) => {
     selectedOrder.value = id;
     showPagoModal.value = true;
@@ -100,14 +98,23 @@ const cerrarPagoModal = () => {
 const totalPedido = (detalle: typeof props.orders[0]['detallepedidos']) => {
     return detalle.reduce((sum, item) => sum + item.producto.precio * item.cantidad, 0).toFixed(2);
 };
+
+const redirectToCloseCash = () => {
+  router.visit('/close-cash');
+};
 </script>
 
 <template>
     <AppLayout>
-
         <Head title="Caja - Pedidos" />
         <div class="p-4 sm:p-6 text-[#4b3621] dark:text-white">
-            <h1 class="text-2xl font-bold mb-4">Pedidos en Caja</h1>
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold">Pedidos en Caja</h1>
+                <button @click="redirectToCloseCash"
+                    class="bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded shadow">
+                    Cierre de caja
+                </button>
+            </div>
 
             <div v-if="orders.length">
                 <div v-for="order in orders" :key="order.id_pedido"
@@ -127,7 +134,7 @@ const totalPedido = (detalle: typeof props.orders[0]['detallepedidos']) => {
                             <div class="flex items-center gap-2 mt-1">
                                 <span class="w-3 h-3 rounded-full"
                                     :style="{ backgroundColor: order.estadopedido.color_codigo }"></span>
-                                <span class="px-2 py-0.5 rounded text-xs font-semibold"
+                                <span class="px-2 py-0.5 rounded text-xs font-semibold text-white"
                                     :style="{ backgroundColor: order.estadopedido.color_codigo }">
                                     {{ order.estadopedido.nombre_estado }}
                                 </span>
