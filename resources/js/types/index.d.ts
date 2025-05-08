@@ -7,7 +7,6 @@ export interface Rol {
   nombre: string;
 }
 
-
 export interface PageProps extends InertiaPageProps {
   auth: {
     user: User | null;
@@ -24,9 +23,16 @@ export interface PageProps extends InertiaPageProps {
         editar: number;
       };
     };
+    horario_atencion?: {
+      [dia: string]: {
+        hora_inicio: string;
+        hora_fin: string;
+      };
+    };
   };
   now?: string;
 };
+
 
 
 

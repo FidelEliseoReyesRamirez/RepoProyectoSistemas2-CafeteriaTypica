@@ -74,6 +74,9 @@ Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
     Route::put('/order/{id}', [PedidoController::class, 'actualizar'])->name('order.update');
     Route::put('/order/{id}/cancelar', [PedidoController::class, 'cancelar'])->name('pedido.cancelar');
     Route::put('/order/{id}/rehacer', [PedidoController::class, 'rehacer']);
+    Route::get('/all-orders', [PedidoController::class, 'allOrders'])->name('orders.all');
+    Route::get('/api/all-orders', [PedidoController::class, 'allOrdersJson']);
+
 });
 
 use Illuminate\Support\Facades\Auth;

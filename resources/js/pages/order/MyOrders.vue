@@ -7,11 +7,18 @@ import type { PageProps } from '@/types';
 const page = usePage<PageProps>();
 const authUser = computed(() => page.props.auth?.user ?? null);
 
-// Ahora como ref porque los vamos a actualizar con el fetch
 const estadosCancelables = ref<string[]>(page.props.config?.estados_cancelables ?? []);
 const estadosEditables = ref<string[]>(page.props.config?.estados_editables ?? []);
 const tiemposPorEstado = ref<Record<string, { cancelar: number; editar: number }>>(page.props.config?.tiempos_por_estado ?? {});
 const serverNow = ref(new Date(page.props.now ?? new Date().toISOString()).getTime());
+const horarioAtencion = ref<Record<string, { hora_inicio: string; hora_fin: string }>>(page.props.config?.horario_atencion ?? {});
+
+const showFueraHorarioModal = ref(false);
+
+const cerrarFueraHorarioModal = () => {
+    showFueraHorarioModal.value = false;
+    pedidoConfirmacionId.value = null;
+};
 
 const props = defineProps<{
     orders: {
@@ -52,34 +59,38 @@ const pedidoSeleccionado = computed(() => {
     return orders.value.find(o => o.id_pedido === selectedOrder.value);
 });
 
+const estaEnHorario = (): boolean => {
+    const now = new Date();
+    const dia = now.toLocaleDateString('es-ES', { weekday: 'long' });
+    const h = horarioAtencion.value[dia];
+    if (!h) return false;
+    const horaActual = now.toTimeString().slice(0, 5);
+    return horaActual >= h.hora_inicio.slice(0, 5) && horaActual <= h.hora_fin.slice(0, 5);
+};
+
 const puedeCancelar = (orderDate: string, estado: string): boolean => {
-    if (!authUser.value) return false;
+    if (!authUser.value || !estaEnHorario()) return false;
     const rol = authUser.value.id_rol;
     if (!estadosCancelables.value.includes(estado)) return false;
     if (rol === 1) return true;
-
     const fechaPedido = new Date(orderDate).getTime();
     const limite = (tiemposPorEstado.value[estado]?.cancelar ?? 0) * 60 * 1000;
     const diferencia = serverNow.value - fechaPedido;
-
-    const resultado = limite === 0 || diferencia <= limite;
-
-    return resultado;
+    return limite === 0 || diferencia <= limite;
 };
+
 const puedeEditar = (orderDate: string, estado: string): boolean => {
-    if (!authUser.value) return false;
+    if (!authUser.value || !estaEnHorario()) return false;
     const rol = authUser.value.id_rol;
     if (!estadosEditables.value.includes(estado)) return false;
-    if (rol === 1) return true; //SUPER IMPORTANTE SI EL ROL ES DE ADMINISTRADOR SIEMPRE LO VA DEJAR EDITAR O CANCELAR FUERA DEL RANGO
-
+    if (rol === 1) return true;
     const fechaPedido = new Date(orderDate).getTime();
     const limite = (tiemposPorEstado.value[estado]?.editar ?? 0) * 60 * 1000;
     const diferencia = serverNow.value - fechaPedido;
-
-    const resultado = limite === 0 || diferencia <= limite;
-
-    return resultado;
+    return limite === 0 || diferencia <= limite;
 };
+
+
 const actualizarPedidos = async () => {
     try {
         const response = await fetch('/api/my-orders');
@@ -95,6 +106,7 @@ const actualizarPedidos = async () => {
         estadosCancelables.value = data.config.estados_cancelables;
         estadosEditables.value = data.config.estados_editables;
         tiemposPorEstado.value = data.config.tiempos_por_estado;
+        horarioAtencion.value = data.config.horario_atencion ?? {};
     } catch (error) {
         console.error('Error actualizando pedidos:', error);
     }
@@ -119,13 +131,31 @@ const pedidoConfirmacionId = ref<number | null>(null);
 
 const confirmarCancelar = (id: number) => {
     pedidoConfirmacionId.value = id;
+    if (!estaEnHorario()) {
+        showFueraHorarioModal.value = true;
+        return;
+    }
     showCancelarModal.value = true;
 };
 
 const confirmarRehacer = (id: number) => {
     pedidoConfirmacionId.value = id;
+    if (!estaEnHorario()) {
+        showFueraHorarioModal.value = true;
+        return;
+    }
     showRehacerModal.value = true;
 };
+
+const confirmarEditar = (id: number) => {
+    pedidoConfirmacionId.value = id;
+    if (!estaEnHorario()) {
+        showFueraHorarioModal.value = true;
+        return;
+    }
+    router.visit(`/order/edit/${id}`, { preserveState: true });
+};
+
 
 const cancelarPedido = () => {
     if (!pedidoConfirmacionId.value) return;
@@ -184,7 +214,6 @@ const pedidosFiltrados = computed(() => {
         return coincideNumero && coincideEstado && coincideTiempo;
     });
 });
-
 </script>
 
 
@@ -261,32 +290,25 @@ const pedidosFiltrados = computed(() => {
                                 Ver resumen
                             </button>
 
-                            <button @click="router.visit(`/order/edit/${order.id_pedido}`, { preserveState: true })"
-                                class="text-white text-xs px-3 py-1 rounded shadow" :class="puedeEditar(order.fecha_hora_registro, order.estadopedido.nombre_estado)
-                                    ? 'bg-yellow-600 hover:bg-yellow-700'
-                                    : 'bg-gray-400 cursor-not-allowed'"
-                                :disabled="!puedeEditar(order.fecha_hora_registro, order.estadopedido.nombre_estado)">
+                            <button @click="confirmarEditar(order.id_pedido)"
+                                class="bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-3 py-1 rounded shadow">
                                 Editar
                             </button>
 
-
-
                             <button v-if="order.estadopedido.nombre_estado !== 'Cancelado'"
-                                @click="confirmarCancelar(order.id_pedido)" :class="[
-                                    'text-white text-xs px-3 py-1 rounded shadow',
-                                    puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)
-                                        ? 'bg-red-600 hover:bg-red-700'
-                                        : 'bg-gray-400 cursor-not-allowed'
-                                ]"
-                                :disabled="!puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)">
+                                @click="confirmarCancelar(order.id_pedido)"
+                                class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow">
                                 Cancelar
                             </button>
+
                             <button v-if="order.estadopedido.nombre_estado === 'Cancelado'"
                                 @click="confirmarRehacer(order.id_pedido)"
                                 class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1 rounded shadow">
                                 Restaurar
                             </button>
+
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -364,6 +386,22 @@ const pedidosFiltrados = computed(() => {
                     <button @click="rehacerPedido"
                         class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">
                         Sí, rehacer
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Modal: fuera del horario de atención -->
+        <div v-if="showFueraHorarioModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl w-full max-w-md">
+                <h2 class="text-lg font-bold mb-4">Fuera del horario de atención</h2>
+                <p class="text-sm mb-4">
+                    Esta acción no puede realizarse en este momento porque estás fuera del horario de atención
+                    configurado.
+                </p>
+                <div class="flex justify-end">
+                    <button @click="cerrarFueraHorarioModal"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+                        Entendido
                     </button>
                 </div>
             </div>

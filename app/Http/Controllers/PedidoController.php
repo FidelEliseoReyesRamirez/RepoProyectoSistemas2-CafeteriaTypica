@@ -15,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 use App\Models\ConfigEstadoPedido;
 use App\Models\ConfigHorarioAtencion;
 use Carbon\Carbon;
+
 class PedidoController extends Controller
 {
     public function crear()
@@ -36,14 +37,14 @@ class PedidoController extends Controller
             'items.*.cantidad' => ['required', 'integer', 'min:1'],
             'items.*.comentario' => ['nullable', 'string'],
         ]);
-    
+
         // Validar horario de atención
         $ahora = Carbon::now();
         $dia = ucfirst($ahora->locale('es')->isoFormat('dddd')); // Ej: 'Lunes'
         $hora = $ahora->format('H:i:s');
-    
+
         $horario = ConfigHorarioAtencion::where('dia', $dia)->first();
-    
+
         if (!$horario || $hora < $horario->hora_inicio || $hora > $horario->hora_fin) {
             return redirect()->back()->withErrors([
                 'fuera_horario' => 'No se pueden realizar pedidos fuera del horario de atención.',
@@ -56,11 +57,11 @@ class PedidoController extends Controller
                     ->where('eliminado', 0)
                     ->firstOrFail();
 
-                    $pedido = Pedido::create([
-                        'id_usuario_mesero' => Auth::id(),
-                        'estado_actual' => $estadoInicial->id_estado,
-                        'fecha_hora_registro' => now(), 
-                    ]);
+                $pedido = Pedido::create([
+                    'id_usuario_mesero' => Auth::id(),
+                    'estado_actual' => $estadoInicial->id_estado,
+                    'fecha_hora_registro' => now(),
+                ]);
 
                 $productosDescripcion = [];
                 $totalPedido = 0;
@@ -319,30 +320,76 @@ class PedidoController extends Controller
         ]);
     }
     public function myOrdersJson()
-{
-    $userId = Auth::id();
+    {
+        $userId = Auth::id();
 
-    $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
-        ->where('id_usuario_mesero', $userId)
-        ->orderByDesc('fecha_hora_registro')
-        ->get();
+        $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
+            ->where('id_usuario_mesero', $userId)
+            ->orderByDesc('fecha_hora_registro')
+            ->get();
 
-    $config = ConfigEstadoPedido::all();
+        $config = ConfigEstadoPedido::all();
 
-    return response()->json([
-        'orders' => $orders,
-        'now' => now()->toISOString(),
-        'config' => [
-            'estados_cancelables' => $config->where('puede_cancelar', true)->pluck('estado')->values(),
-            'estados_editables' => $config->where('puede_editar', true)->pluck('estado')->values(),
-            'tiempos_por_estado' => $config->mapWithKeys(fn($item) => [
-                $item->estado => [
-                    'cancelar' => $item->tiempo_cancelacion_minutos,
-                    'editar' => $item->tiempo_edicion_minutos,
-                ]
-            ]),
-        ],
-    ]);
-}
+        return response()->json([
+            'orders' => $orders,
+            'now' => now()->toISOString(),
+            'config' => [
+                'estados_cancelables' => $config->where('puede_cancelar', true)->pluck('estado')->values(),
+                'estados_editables' => $config->where('puede_editar', true)->pluck('estado')->values(),
+                'tiempos_por_estado' => $config->mapWithKeys(fn($item) => [
+                    $item->estado => [
+                        'cancelar' => $item->tiempo_cancelacion_minutos,
+                        'editar' => $item->tiempo_edicion_minutos,
+                    ]
+                ]),
+            ],
+        ]);
+    }
+    public function allOrders()
+    {
+        $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
+            ->orderByDesc('fecha_hora_registro')
+            ->get();
 
+        $config = ConfigEstadoPedido::all();
+
+        return Inertia::render('order/AllOrders', [
+            'orders' => $orders,
+            'now' => now()->toISOString(),
+            'config' => [
+                'estados_cancelables' => $config->where('puede_cancelar', true)->pluck('estado')->values(),
+                'estados_editables' => $config->where('puede_editar', true)->pluck('estado')->values(),
+                'tiempos_por_estado' => $config->mapWithKeys(fn($item) => [
+                    $item->estado => [
+                        'cancelar' => $item->tiempo_cancelacion_minutos,
+                        'editar' => $item->tiempo_edicion_minutos,
+                    ]
+                ]),
+            ],
+        ]);
+    }
+
+    public function allOrdersJson()
+    {
+        $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
+            ->orderByDesc('fecha_hora_registro')
+            ->get();
+
+        $config = ConfigEstadoPedido::all();
+
+        return response()->json([
+            'orders' => $orders,
+            'now' => now()->toISOString(),
+            'config' => [
+                'estados_cancelables' => $config->where('puede_cancelar', true)->pluck('estado')->values(),
+                'estados_editables' => $config->where('puede_editar', true)->pluck('estado')->values(),
+                'tiempos_por_estado' => $config->mapWithKeys(fn($item) => [
+                    $item->estado => [
+                        'cancelar' => $item->tiempo_cancelacion_minutos,
+                        'editar' => $item->tiempo_edicion_minutos,
+                    ]
+                ]),
+            ],
+        ]);
+    }
 }

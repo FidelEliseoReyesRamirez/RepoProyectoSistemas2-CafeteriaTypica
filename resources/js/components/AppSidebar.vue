@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, UserPlus, Coffee, Utensils, Settings } from 'lucide-vue-next';
+import { LayoutGrid, UserPlus, Coffee, Utensils, Settings,ListChecks  } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import type { PageProps } from '@/types';
 
@@ -49,6 +49,11 @@ const mainNavItems: NavItem[] = [
     title: 'Ordenar',
     href: route('order.index'),
     icon: Coffee,
+  }] : []),
+  ...(authUser && authUser.id_rol === 1 ? [{
+    title: 'Pedidos',
+    href: '/all-orders',
+    icon: ListChecks ,
   }] : []),
 ];
 
