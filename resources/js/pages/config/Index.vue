@@ -195,10 +195,21 @@ const guardarConfig = () => {
         }
     })
 }
-
+const validarHorarios = (): boolean => {
+    for (const h of horarios.value) {
+        if (h.hora_inicio >= h.hora_fin) {
+            mensajeModal.value = `La hora de inicio debe ser menor que la hora de fin en "${h.dia}".`
+            mostrarModal.value = true
+            return false
+        }
+    }
+    return true
+}
 const guardarHorarios = async () => {
+    if (!validarHorarios()) return
+
     try {
-        const horariosFormateados = horarios.value.map((h: { dia: string; hora_inicio: string; hora_fin: string }) => ({
+        const horariosFormateados = horarios.value.map(h => ({
             dia: h.dia,
             hora_inicio: h.hora_inicio + ':00',
             hora_fin: h.hora_fin + ':00',
@@ -213,4 +224,5 @@ const guardarHorarios = async () => {
         mostrarModal.value = true
     }
 }
+
 </script>

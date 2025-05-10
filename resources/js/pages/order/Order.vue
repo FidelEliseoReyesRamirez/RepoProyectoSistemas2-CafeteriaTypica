@@ -147,8 +147,6 @@ const enviarPedido = () => {
 };
 
 
-
-
 const cancelarPedido = () => {
     carrito.value = [];
     localStorage.removeItem('carrito_pedido');
@@ -327,8 +325,10 @@ onMounted(() => {
                 </div>
 
                 <!-- Carrito -->
-                <div class="w-full lg:w-1/3 bg-[#f4eee7] dark:bg-[#2c211b] rounded-xl border border-[#c5a880] dark:border-[#8c5c3b] p-4 shadow-lg max-h-[calc(100vh-150px)] overflow-y-auto lg:sticky lg:top-24"
+                <div class="w-full lg:w-1/3 bg-[#f4eee7] dark:bg-[#2c211b] rounded-xl border border-[#c5a880] dark:border-[#8c5c3b] p-4 shadow-lg overflow-y-auto max-h-[60vh]"
                     v-if="carrito.length">
+
+
                     <h2 class="text-lg font-semibold mb-2">Pedido</h2>
 
                     <div class="space-y-4">

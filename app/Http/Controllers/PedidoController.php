@@ -41,7 +41,7 @@ class PedidoController extends Controller
 
         // Validar horario de atención
         $ahora = Carbon::now();
-        $dia = ucfirst($ahora->locale('es')->isoFormat('dddd')); // Ej: 'Lunes'
+        $dia = ucfirst(strtolower($ahora->locale('es')->isoFormat('dddd')));
         $hora = $ahora->format('H:i:s');
 
         $horario = ConfigHorarioAtencion::where('dia', $dia)->first();
