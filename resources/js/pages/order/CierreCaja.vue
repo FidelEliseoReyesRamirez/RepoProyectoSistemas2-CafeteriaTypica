@@ -1,4 +1,3 @@
-<!-- Mantengo tu script igual -->
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
@@ -86,19 +85,30 @@ const cerrarResumen = () => {
     pedidoSeleccionado.value = null;
     showResumen.value = false;
 };
-</script>
 
+const fechaFinDeshabilitada = computed(() => {
+    return fechaInicio.value && fechaFin.value && new Date(fechaFin.value) < new Date(fechaInicio.value);
+});
+
+
+const fechasDisponibles = computed(() => {
+    return props.fechas.filter(fecha => new Date(fecha) >= new Date(fechaInicio.value));
+});
+</script>
 <template>
     <AppLayout>
         <Head title="Cierre de Caja" />
         <div class="p-4 sm:p-6 text-[#4b3621] dark:text-white w-full max-w-7xl mx-auto overflow-x-hidden">
-
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h1 class="text-2xl sm:text-3xl font-bold">Cierre de Caja</h1>
                 <button @click="volver"
                     class="bg-gray-500 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded shadow">
                     Volver
                 </button>
+                <a href="/exportar-pedidos"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded shadow">
+                    Exportar a Excel
+                </a>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -112,9 +122,11 @@ const cerrarResumen = () => {
 
                 <div>
                     <label class="block mb-1 text-sm font-semibold">Fecha de fin (opcional):</label>
-                    <select v-model="fechaFin" class="w-full border px-3 py-2 rounded text-black">
+                    <select v-model="fechaFin" :disabled="!!fechaFinDeshabilitada"
+                        class="w-full border px-3 py-2 rounded text-black">
                         <option value="">-- Sin fecha fin --</option>
-                        <option v-for="fecha in props.fechas" :key="fecha" :value="fecha">{{ fecha }}</option>
+                        <!-- Filtramos las fechas disponibles para fechaFin -->
+                        <option v-for="fecha in fechasDisponibles" :key="fecha" :value="fecha">{{ fecha }}</option>
                     </select>
                 </div>
 
@@ -162,8 +174,10 @@ const cerrarResumen = () => {
                     <tbody>
                         <tr v-for="pedido in pedidos" :key="pedido.id_pedido" class="border-t border-gray-200">
                             <td class="px-2 sm:px-4 py-2 break-words whitespace-normal">#{{ pedido.id_pedido }}</td>
-                            <td class="px-2 sm:px-4 py-2 break-words whitespace-normal">{{ new Date(pedido.fecha).toLocaleString('es-BO') }}</td>
-                            <td class="px-2 sm:px-4 py-2 break-words whitespace-normal">{{ pedido.monto.toFixed(2) }}</td>
+                            <td class="px-2 sm:px-4 py-2 break-words whitespace-normal">{{ new
+                                Date(pedido.fecha).toLocaleString('es-BO') }}</td>
+                            <td class="px-2 sm:px-4 py-2 break-words whitespace-normal">{{ pedido.monto.toFixed(2) }}
+                            </td>
                             <td class="px-2 sm:px-4 py-2">
                                 <button @click="abrirResumen(pedido)"
                                     class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded shadow">
@@ -186,11 +200,13 @@ const cerrarResumen = () => {
                             <div class="min-w-0">
                                 <p class="font-medium break-words">{{ item.producto }}</p>
                                 <p class="text-xs text-gray-500">Cantidad: {{ item.cantidad }}</p>
-                                <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300 break-words">
+                                <p v-if="item.comentario"
+                                    class="text-xs italic mt-1 text-gray-700 dark:text-gray-300 break-words">
                                     "{{ item.comentario }}"
                                 </p>
                             </div>
-                            <p class="font-semibold whitespace-nowrap">{{ (item.precio * item.cantidad).toFixed(2) }} Bs</p>
+                            <p class="font-semibold whitespace-nowrap">{{ (item.precio * item.cantidad).toFixed(2) }} Bs
+                            </p>
                         </div>
                     </li>
                 </ul>

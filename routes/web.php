@@ -128,5 +128,6 @@ Route::middleware(['auth', 'verified', IsAdminOrCashier::class])->group(function
     Route::get('/close-cash', [PedidoController::class, 'vistaCierreCaja'])->name('cierre.caja');
     Route::get('/cierre-caja/resumen/{fecha}', [PedidoController::class, 'resumenPorFecha']);
     Route::get('/cierre-caja/pedidos/{inicio}/{fin?}', [PedidoController::class, 'pedidosPorFecha']);
-  
+  Route::get('/exportar-pedidos', [\App\Http\Controllers\PedidoExportController::class, 'export']);
+
 });
