@@ -39,37 +39,31 @@ onMounted(cargarPedidos);
 
 <template>
   <AppLayout>
-
     <Head title="Pedidos Cocina" />
     <div class="p-4 sm:p-6 w-full max-w-screen-xl mx-auto text-[#4b3621] dark:text-white">
       <h1 class="text-2xl sm:text-3xl font-bold mb-6">Pedidos Cocina</h1>
 
       <div class="flex gap-2 mb-6">
-        <button @click="router.visit('/kitchen-orders/canceled')" class="px-3 py-1 text-sm text-white rounded shadow"
-          style="background-color: #FF0000">
+        <button @click="router.visit('/kitchen-orders/canceled')" class="px-3 py-1 text-sm text-white rounded shadow" style="background-color: #FF0000">
           Pedidos Cancelados
         </button>
-        <button @click="router.visit('/kitchen-orders/completed')" class="px-3 py-1 text-sm text-white rounded shadow"
-          style="background-color: #800080">
+        <button @click="router.visit('/kitchen-orders/completed')" class="px-3 py-1 text-sm text-white rounded shadow" style="background-color: #800080">
           Pedidos Finalizados
         </button>
-        <button @click="router.visit('/kitchen-orders/delivered')" class="px-3 py-1 text-sm text-white rounded shadow"
-          style="background-color: #0000FF">
+        <button @click="router.visit('/kitchen-orders/delivered')" class="px-3 py-1 text-sm text-white rounded shadow" style="background-color: #0000FF">
           Pedidos Entregados
         </button>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Cada pedido es ahora un contenedor independiente que no afecta el tamaño de los demás -->
         <div v-for="(pedido, index) in pedidosActivos" :key="pedido.id_pedido"
-          class="rounded border relative overflow-visible p-4"
+          class="pedido-card rounded border relative overflow-visible p-4"
           :style="{ backgroundColor: pedido.estadopedido.color_codigo + '22', borderColor: pedido.estadopedido.color_codigo }">
-          <div class="absolute left-0 top-0 h-full w-2" :style="{ backgroundColor: pedido.estadopedido.color_codigo }">
-          </div>
-          <div class="absolute right-0 top-0 h-full w-2" :style="{ backgroundColor: pedido.estadopedido.color_codigo }">
-          </div>
+          <div class="absolute left-0 top-0 h-full w-2" :style="{ backgroundColor: pedido.estadopedido.color_codigo }"></div>
+          <div class="absolute right-0 top-0 h-full w-2" :style="{ backgroundColor: pedido.estadopedido.color_codigo }"></div>
 
-          <div
-            class="absolute -top-4 -left-4 text-black font-bold text-xl rounded-full h-10 w-10 flex items-center justify-center z-20"
+          <div class="absolute -top-4 -left-4 text-black font-bold text-xl rounded-full h-10 w-10 flex items-center justify-center z-20"
             :style="{ backgroundColor: pedido.estadopedido.color_codigo }">
             {{ index + 1 }}
           </div>
@@ -81,16 +75,14 @@ onMounted(cargarPedidos);
 
           <p class="text-xs font-semibold mb-2">
             Estado:
-            <span
-              :class="['rounded px-2 py-0.5', pedido.estadopedido.nombre_estado === 'Pendiente' ? 'text-black' : 'text-white']"
+            <span :class="['rounded px-2 py-0.5', pedido.estadopedido.nombre_estado === 'Pendiente' ? 'text-black' : 'text-white']"
               :style="{ backgroundColor: pedido.estadopedido.color_codigo }">
               {{ pedido.estadopedido.nombre_estado }}
             </span>
           </p>
 
           <div class="relative pr-1 mb-2">
-            <ul class="text-sm divide-y divide-gray-300 dark:divide-gray-600 custom-scrollbar"
-              :class="{ 'max-h-[3rem] overflow-y-auto': !pedido.expanded, 'max-h-full': pedido.expanded }">
+            <ul class="text-sm divide-y divide-gray-300 dark:divide-gray-600 custom-scrollbar">
               <li v-for="detalle in pedido.detallepedidos" :key="detalle.id_detalle" class="py-1">
                 {{ detalle.cantidad }} x {{ detalle.producto.nombre }}
                 <span v-if="detalle.comentario" class="block text-xs italic">
@@ -102,20 +94,6 @@ onMounted(cargarPedidos);
                 </span>
               </li>
             </ul>
-            <button v-if="!pedido.expanded" @click="pedido.expanded = true"
-              class="text-xs text-blue-600 hover:underline mt-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" class="inline">
-                <path fill="none" d="M0 0h24v24H0z"></path>
-                <path d="M12 2l4 4h-3v6H9V6H6z"></path>
-              </svg> Ver más
-            </button>
-            <button v-if="pedido.expanded" @click="pedido.expanded = false"
-              class="text-xs text-blue-600 hover:underline mt-2">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" class="inline">
-                <path fill="none" d="M0 0h24v24H0z"></path>
-                <path d="M12 22l-4-4h3V12h3v6h3z"></path>
-              </svg> Ver menos
-            </button>
           </div>
 
           <div class="flex flex-wrap gap-2 justify-center">
@@ -179,7 +157,6 @@ onMounted(cargarPedidos);
   </AppLayout>
 </template>
 
-
 <style scoped>
 button {
   transition: background-color 0.2s ease-in-out;
@@ -199,4 +176,20 @@ button {
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Ajuste automático de columnas */
+  gap: 1rem;
+  grid-auto-rows: auto; /* La altura se ajustará automáticamente según el contenido */
+  align-items: start; /* Asegura que cada pedido tenga su propia altura */
+}
+
+.pedido-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  background-color: #ffffff;
+  height: auto; /* La altura será automática según el contenido */
+}
 </style>
+
