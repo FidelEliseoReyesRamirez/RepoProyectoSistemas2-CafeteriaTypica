@@ -60,8 +60,8 @@ const mainNavItems: NavItem[] = [
   href: '/cashier-orders',
   icon: DollarSign,
 }] : []),
-...(authUser && [1, 5].includes(authUser.id_rol) ? [{
-  title: 'Kitchen',
+...(authUser && [1, 3].includes(authUser.id_rol) ? [{
+  title: 'Cocina',
   href: '/kitchen-orders',
   icon: ChefHat,
 }] : []),

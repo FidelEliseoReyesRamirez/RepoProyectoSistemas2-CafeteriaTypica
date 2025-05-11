@@ -4,15 +4,20 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use App\Http\Middleware\IsAdmin;
+
+
+// Ruta para Dashboard, solo accesible para admin
+Route::get('/dashboard', function () {
+    return Inertia::render('Dashboard');
+})->middleware(['auth', 'verified', IsAdmin::class])->name('dashboard');
 
 
 Route::get('/', function () {
     return Redirect::route('login');
 })->name('home');
 
-Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
@@ -47,7 +52,7 @@ Route::middleware(['auth', 'verified', 'is_admin'])->group(function () {
 //PRODUCTOS
 use App\Http\Controllers\ProductoController;
 
-Route::middleware(['auth', 'verified', 'can_manage_productos'])->group(function () {
+Route::middleware(['auth', 'verified', 'is_admin_or_kitchen'])->group(function () {
     Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
     Route::get('/productos/create', [ProductoController::class, 'create'])->name('productos.create');
     Route::post('/productos', [ProductoController::class, 'store'])->name('productos.store');
