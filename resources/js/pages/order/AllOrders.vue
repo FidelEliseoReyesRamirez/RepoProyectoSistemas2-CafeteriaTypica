@@ -391,6 +391,7 @@ const generarPDFAdmin = async (pedidoId: number) => {
                     <p>
                         {{
                             pedidoSeleccionado.detallepedidos
+                            // @ts-ignore
                                 .reduce((sum, item) => sum + item.producto.precio * item.cantidad, 0)
                                 .toFixed(2)
                         }} Bs
