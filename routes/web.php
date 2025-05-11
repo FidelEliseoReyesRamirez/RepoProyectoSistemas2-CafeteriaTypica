@@ -76,7 +76,6 @@ Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
     Route::put('/order/{id}/rehacer', [PedidoController::class, 'rehacer']);
     Route::get('/all-orders', [PedidoController::class, 'allOrders'])->name('orders.all');
     Route::get('/api/all-orders', [PedidoController::class, 'allOrdersJson']);
-
 });
 
 use Illuminate\Support\Facades\Auth;
@@ -111,6 +110,7 @@ Route::middleware(['auth', 'is_admin'])->group(function () {
     Route::post('/configuracion', [ConfiguracionController::class, 'update'])->name('config.update');
 });
 Route::get('/api/my-orders', [PedidoController::class, 'myOrdersJson']);
+
 use App\Http\Controllers\ConfigHorarioAtencionController;
 
 
@@ -126,8 +126,7 @@ Route::middleware(['auth', 'verified', IsAdminOrCashier::class])->group(function
     Route::post('/order/{id}/pagar', [PedidoController::class, 'marcarComoPagado'])->name('order.pagar');
     Route::put('/order/{id}/no-pagado', [PedidoController::class, 'marcarComoNoPagado']);
     Route::get('/close-cash', [PedidoController::class, 'vistaCierreCaja'])->name('cierre.caja');
-    Route::get('/cierre-caja/resumen/{fecha}', [PedidoController::class, 'resumenPorFecha']);
+    Route::get('/cierre-caja/resumen/{inicio}/{fin?}', [PedidoController::class, 'resumenPorFecha']);
     Route::get('/cierre-caja/pedidos/{inicio}/{fin?}', [PedidoController::class, 'pedidosPorFecha']);
-  Route::get('/exportar-pedidos', [\App\Http\Controllers\PedidoExportController::class, 'export']);
-
+    Route::get('/exportar-pedidos', [\App\Http\Controllers\PedidoExportController::class, 'export']);
 });

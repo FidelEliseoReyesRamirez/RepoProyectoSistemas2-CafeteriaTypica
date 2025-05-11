@@ -575,11 +575,15 @@ class PedidoController extends Controller
         ]);
     }
 
-    public function resumenPorFecha($fecha)
+    public function resumenPorFecha($inicio, $fin = null)
     {
-        $pagos = Pago::with('pedido')
-            ->whereDate('fecha_pago', $fecha)
-            ->get();
+        $query = Pedido::with('pago')
+            ->whereHas('pago')
+            ->when($fin, fn($q) => $q->whereBetween('fecha_hora_registro', [
+                Carbon::parse($inicio)->startOfDay(),
+                Carbon::parse($fin)->endOfDay(),
+            ]))
+            ->when(!$fin, fn($q) => $q->whereDate('fecha_hora_registro', $inicio));
 
         $totales = [
             'Efectivo' => 0,
@@ -588,41 +592,45 @@ class PedidoController extends Controller
             'Total' => 0,
         ];
 
-        foreach ($pagos as $pago) {
-            $metodo = $pago->metodo_pago;
-            $totales[$metodo] += $pago->monto;
-            $totales['Total'] += $pago->monto;
+        foreach ($query->get() as $pedido) {
+            $pago = $pedido->pago;
+            if ($pago) {
+                $totales[$pago->metodo_pago] += $pago->monto;
+                $totales['Total'] += $pago->monto;
+            }
         }
 
         return response()->json($totales);
     }
+
     public function pedidosPorFecha($inicio, $fin = null)
     {
-        $query = Pago::with('pedido.detallepedidos.producto')
-            ->when($fin, fn($q) => $q->whereBetween('fecha_pago', [$inicio, $fin]))
-            ->when(!$fin, fn($q) => $q->whereDate('fecha_pago', $inicio));
+        $query = Pedido::with(['detallepedidos.producto', 'usuario', 'estadopedido', 'pago'])
+            ->whereHas('pago', function ($q) {
+                $q->where('eliminado', false);
+            })
+            ->when($fin, fn($q) => $q->whereBetween('fecha_hora_registro', [$inicio, $fin]))
+            ->when(!$fin, fn($q) => $q->whereDate('fecha_hora_registro', $inicio));
 
         if (request()->filled('metodo')) {
-            $query->where('metodo_pago', request('metodo'));
+            $query->whereHas('pago', fn($q) => $q->where('metodo_pago', request('metodo')));
         }
 
-        $pagos = $query->get();
+        $pedidos = $query->get()->unique('id_pedido')->values();
 
-        return response()->json($pagos->map(function ($pago) {
-            $pedido = $pago->pedido;
-
+        return response()->json($pedidos->map(function ($pedido) {
             return [
-                'id_pedido' => $pedido?->id_pedido,
-                'monto' => $pago->monto ?? 0,
-                'fecha' => $pedido?->fecha_hora_registro,
-                'detalles' => $pedido?->detallepedidos->map(function ($detalle) {
+                'id_pedido' => $pedido->id_pedido,
+                'monto' => $pedido->pago->monto ?? 0,
+                'fecha' => $pedido->fecha_hora_registro,
+                'detalles' => $pedido->detallepedidos->map(function ($detalle) {
                     return [
                         'producto' => $detalle->producto->nombre,
                         'cantidad' => $detalle->cantidad,
                         'comentario' => $detalle->comentario,
                         'precio' => $detalle->precio_unitario,
                     ];
-                }) ?? [],
+                }),
             ];
         }));
     }
