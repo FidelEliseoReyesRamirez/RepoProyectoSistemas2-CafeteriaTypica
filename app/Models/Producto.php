@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Categorium;
 
+
 /**
  * Class Producto
  * 
@@ -65,4 +66,5 @@ class Producto extends Model
 	{
 		return $this->hasMany(Prediccion::class, 'id_producto');
 	}
+	
 }

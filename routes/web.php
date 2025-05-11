@@ -151,3 +151,6 @@ Route::get('/kitchen-orders/completed', [KitchenOrderController::class, 'complet
 });
 
 Route::get('/pedido/{id}/pdf', [PedidoControllerPDF::class, 'generarPDF'])->name('pedido.pdf');
+
+use App\Http\Controllers\PedidoControllerAdminPDF;
+Route::get('/pedido/{id}/admin-pdf', [PedidoControllerAdminPDF::class, 'generarPDF'])->name('pedido.admin_pdf');

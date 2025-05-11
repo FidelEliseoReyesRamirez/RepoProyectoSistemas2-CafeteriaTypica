@@ -226,7 +226,32 @@ const pedidosFiltrados = computed(() => {
         return coincideNumero && coincideEstado && coincideTiempo && coincideMesero;
     });
 });
+import axios from 'axios';
 
+const generarPDFAdmin = async (pedidoId: number) => {
+    if (!pedidoId) {
+        console.error('El ID del pedido no está definido');
+        return;
+    }
+
+    try {
+        const response = await axios.get(`/pedido/${pedidoId}/admin-pdf`, { responseType: 'blob' });
+
+        // Crear un objeto URL a partir del blob recibido
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+
+        // Abrir el PDF en una nueva pestaña
+        const pdfWindow = window.open(url, '_blank');
+
+        // Esperar a que el PDF se cargue y luego activar la impresión automática
+        pdfWindow?.addEventListener('load', () => {
+            pdfWindow?.print();
+        });
+
+    } catch (error) {
+        console.error('Error generando PDF del Admin:', error);
+    }
+};
 </script>
 
 
@@ -303,6 +328,12 @@ const pedidosFiltrados = computed(() => {
 
 
                         <div class="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0">
+                            <button @click="generarPDFAdmin(order.id_pedido)"
+                                class="text-xs bg-[#800080] hover:bg-[#9b4dff] text-white rounded px-2 py-1">
+                                Exportar PDF
+                            </button>
+
+
                             <button @click="abrirResumen(order.id_pedido)"
                                 class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded shadow">
                                 Ver resumen
