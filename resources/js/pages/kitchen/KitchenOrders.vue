@@ -35,22 +35,50 @@ const cerrarResumen = () => {
 };
 
 onMounted(cargarPedidos);
+
+const pedido = ref<any | null>(null); 
+
+const generarPDF = async (pedidoId: number) => {
+  try {
+    const response = await axios.get(`/pedido/${pedidoId}/pdf`, { responseType: 'blob' });
+
+    // Crear un objeto URL a partir del blob recibido
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+
+    // Abrir el PDF en una nueva pestaña
+    const pdfWindow = window.open(url, '_blank');
+
+    // Esperar a que el PDF se cargue y luego activar la impresión automática
+    pdfWindow?.addEventListener('load', () => {
+      pdfWindow?.print();
+    });
+
+  } catch (error) {
+    console.error('Error generando PDF:', error);
+  }
+};
+
+
 </script>
 
 <template>
   <AppLayout>
+
     <Head title="Pedidos Cocina" />
     <div class="p-4 sm:p-6 w-full max-w-screen-xl mx-auto text-[#4b3621] dark:text-white">
       <h1 class="text-2xl sm:text-3xl font-bold mb-6">Pedidos Cocina</h1>
 
       <div class="flex gap-2 mb-6">
-        <button @click="router.visit('/kitchen-orders/canceled')" class="px-3 py-1 text-sm text-white rounded shadow" style="background-color: #FF0000">
+        <button @click="router.visit('/kitchen-orders/canceled')" class="px-3 py-1 text-sm text-white rounded shadow"
+          style="background-color: #FF0000">
           Pedidos Cancelados
         </button>
-        <button @click="router.visit('/kitchen-orders/completed')" class="px-3 py-1 text-sm text-white rounded shadow" style="background-color: #800080">
+        <button @click="router.visit('/kitchen-orders/completed')" class="px-3 py-1 text-sm text-white rounded shadow"
+          style="background-color: #800080">
           Pedidos Finalizados
         </button>
-        <button @click="router.visit('/kitchen-orders/delivered')" class="px-3 py-1 text-sm text-white rounded shadow" style="background-color: #0000FF">
+        <button @click="router.visit('/kitchen-orders/delivered')" class="px-3 py-1 text-sm text-white rounded shadow"
+          style="background-color: #0000FF">
           Pedidos Entregados
         </button>
       </div>
@@ -60,10 +88,13 @@ onMounted(cargarPedidos);
         <div v-for="(pedido, index) in pedidosActivos" :key="pedido.id_pedido"
           class="pedido-card rounded border relative overflow-visible p-4"
           :style="{ backgroundColor: pedido.estadopedido.color_codigo + '22', borderColor: pedido.estadopedido.color_codigo }">
-          <div class="absolute left-0 top-0 h-full w-2" :style="{ backgroundColor: pedido.estadopedido.color_codigo }"></div>
-          <div class="absolute right-0 top-0 h-full w-2" :style="{ backgroundColor: pedido.estadopedido.color_codigo }"></div>
+          <div class="absolute left-0 top-0 h-full w-2" :style="{ backgroundColor: pedido.estadopedido.color_codigo }">
+          </div>
+          <div class="absolute right-0 top-0 h-full w-2" :style="{ backgroundColor: pedido.estadopedido.color_codigo }">
+          </div>
 
-          <div class="absolute -top-4 -left-4 text-black font-bold text-xl rounded-full h-10 w-10 flex items-center justify-center z-20"
+          <div
+            class="absolute -top-4 -left-4 text-black font-bold text-xl rounded-full h-10 w-10 flex items-center justify-center z-20"
             :style="{ backgroundColor: pedido.estadopedido.color_codigo }">
             {{ index + 1 }}
           </div>
@@ -75,7 +106,8 @@ onMounted(cargarPedidos);
 
           <p class="text-xs font-semibold mb-2">
             Estado:
-            <span :class="['rounded px-2 py-0.5', pedido.estadopedido.nombre_estado === 'Pendiente' ? 'text-black' : 'text-white']"
+            <span
+              :class="['rounded px-2 py-0.5', pedido.estadopedido.nombre_estado === 'Pendiente' ? 'text-black' : 'text-white']"
               :style="{ backgroundColor: pedido.estadopedido.color_codigo }">
               {{ pedido.estadopedido.nombre_estado }}
             </span>
@@ -120,6 +152,9 @@ onMounted(cargarPedidos);
             <button @click="abrirResumen(pedido)"
               class="text-xs bg-gray-600 hover:bg-gray-700 text-white rounded px-2 py-1">
               Detalles
+            </button>
+            <button @click="generarPDF(pedido.id_pedido)"   class="text-xs bg-[#800080] hover:bg-[#9b4dff]  text-white rounded px-2 py-1">
+              Imprimir
             </button>
           </div>
         </div>
@@ -176,12 +211,16 @@ button {
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Ajuste automático de columnas */
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  /* Ajuste automático de columnas */
   gap: 1rem;
-  grid-auto-rows: auto; /* La altura se ajustará automáticamente según el contenido */
-  align-items: start; /* Asegura que cada pedido tenga su propia altura */
+  grid-auto-rows: auto;
+  /* La altura se ajustará automáticamente según el contenido */
+  align-items: start;
+  /* Asegura que cada pedido tenga su propia altura */
 }
 
 .pedido-card {
@@ -189,7 +228,7 @@ button {
   flex-direction: column;
   justify-content: flex-start;
   background-color: #ffffff;
-  height: auto; /* La altura será automática según el contenido */
+  height: auto;
+  /* La altura será automática según el contenido */
 }
 </style>
-

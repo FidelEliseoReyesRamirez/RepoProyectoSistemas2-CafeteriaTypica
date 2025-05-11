@@ -138,6 +138,7 @@ Route::middleware(['auth', 'verified', IsAdminOrCashier::class])->group(function
 
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\KitchenOrderController;
+use App\Http\Controllers\PedidoControllerPDF;
 
 Route::middleware(['auth', 'verified', 'is_admin_or_kitchen'])->group(function () {
     Route::get('/kitchen-orders', [KitchenController::class, 'vista'])->name('kitchen.view');
@@ -146,5 +147,7 @@ Route::middleware(['auth', 'verified', 'is_admin_or_kitchen'])->group(function (
 Route::get('/kitchen-orders/canceled', [KitchenOrderController::class, 'canceled'])->name('kitchen.canceled');
 Route::get('/kitchen-orders/delivered', [KitchenOrderController::class, 'delivered'])->name('kitchen.delivered');
 Route::get('/kitchen-orders/completed', [KitchenOrderController::class, 'completed'])->name('kitchen.completed');
+
 });
 
+Route::get('/pedido/{id}/pdf', [PedidoControllerPDF::class, 'generarPDF'])->name('pedido.pdf');
