@@ -130,3 +130,16 @@ Route::middleware(['auth', 'verified', IsAdminOrCashier::class])->group(function
     Route::get('/cierre-caja/pedidos/{inicio}/{fin?}', [PedidoController::class, 'pedidosPorFecha']);
     Route::get('/exportar-pedidos', [\App\Http\Controllers\PedidoExportController::class, 'export']);
 });
+
+use App\Http\Controllers\KitchenController;
+use App\Http\Controllers\KitchenOrderController;
+
+Route::middleware(['auth', 'verified', 'is_admin_or_kitchen'])->group(function () {
+    Route::get('/kitchen-orders', [KitchenController::class, 'vista'])->name('kitchen.view');
+    Route::get('/api/kitchen-orders', [KitchenController::class, 'index']);
+    Route::put('/api/kitchen-orders/{id}/estado', [KitchenController::class, 'cambiarEstado']);
+Route::get('/kitchen-orders/canceled', [KitchenOrderController::class, 'canceled'])->name('kitchen.canceled');
+Route::get('/kitchen-orders/delivered', [KitchenOrderController::class, 'delivered'])->name('kitchen.delivered');
+Route::get('/kitchen-orders/completed', [KitchenOrderController::class, 'completed'])->name('kitchen.completed');
+});
+

@@ -94,4 +94,19 @@ class Pedido extends Model
     {
         return $this->hasOne(Pago::class, 'id_pedido');
     }
+    protected $appends = ['nuevos_detalles'];
+    public function getNuevosDetallesAttribute(): array
+    {
+        if ($this->estadopedido->nombre_estado !== 'Modificado') {
+            return [];
+        }
+        $audit = \App\Models\Auditorium::where('accion', 'Editar pedido')
+            ->where('descripcion', 'like', "%pedido #{$this->id_pedido}%")
+            ->latest('fecha_hora')
+            ->first();
+        if (!$audit || ! preg_match('/con: (.*) \(Total:/', $audit->descripcion, $m)) {
+            return [];
+        }
+        return array_map('trim', explode(',', $m[1]));
+    }
 }
