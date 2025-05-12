@@ -186,7 +186,6 @@ const filtroTiempo = ref('');
 
 const estadosDisponibles = computed(() => {
     const estados = [...new Set(props.orders.map(order => order.estadopedido.nombre_estado))];
-    console.log('Estados disponibles:', estados);  // Aquí lo puedes ver
     return estados;
 });
 
