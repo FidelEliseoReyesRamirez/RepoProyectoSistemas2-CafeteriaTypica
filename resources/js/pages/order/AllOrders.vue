@@ -131,13 +131,26 @@ const showRehacerModal = ref(false);
 const pedidoConfirmacionId = ref<number | null>(null);
 
 const confirmarCancelar = (id: number) => {
-    pedidoConfirmacionId.value = id;
+    pedidoConfirmacionId.value = id; // Asegúrate de que el id se esté guardando correctamente
     if (!estaEnHorario()) {
         showFueraHorarioModal.value = true;
         return;
     }
-    showCancelarModal.value = true;
+    showCancelarModal.value = true; // Esto debería mostrar el modal de confirmación
 };
+
+const cancelarPedido = async () => {
+    if (!pedidoConfirmacionId.value) return; // Asegúrate de que el ID no esté vacío
+    try {
+        await router.put(`/order/${pedidoConfirmacionId.value}/cancelar`); // Usamos await para esperar la acción
+        showCancelarModal.value = false; // Cerrar el modal
+        pedidoConfirmacionId.value = null; // Limpiar el ID de confirmación
+    } catch (error) {
+        console.error('Error al cancelar el pedido:', error); // Manejar errores si los hay
+    }
+};
+
+
 
 const confirmarRehacer = (id: number) => {
     pedidoConfirmacionId.value = id;
@@ -155,13 +168,6 @@ const confirmarEditar = (id: number) => {
         return;
     }
     router.visit(`/order/edit/${id}`, { preserveState: true });
-};
-
-const cancelarPedido = () => {
-    if (!pedidoConfirmacionId.value) return;
-    router.put(`/order/${pedidoConfirmacionId.value}/cancelar`);
-    showCancelarModal.value = false;
-    pedidoConfirmacionId.value = null;
 };
 
 const rehacerPedido = () => {
@@ -263,19 +269,54 @@ const cerrarExportModal = () => {
 
 const exportarSeleccionExcel = () => {
     const params = new URLSearchParams();
+
+    // Añadir las columnas seleccionadas
     columnasSeleccionadas.value.forEach(col => params.append('columnas[]', col));
+
+    // Añadir los filtros activos
+    if (filtroNumero.value) params.set('numero', filtroNumero.value);
+    if (filtroEstado.value) params.set('estado', filtroEstado.value);
+    if (filtroTiempo.value) params.set('tiempo', filtroTiempo.value);
+    if (filtroMesero.value) params.set('mesero', filtroMesero.value);
+
+    // Si se ha seleccionado un rango de fechas, añadir las fechas de inicio y fin
     if (fechaInicio.value) params.set('fecha_inicio', formatDate(new Date(fechaInicio.value))!);
     if (fechaFin.value) params.set('fecha_fin', formatDate(new Date(fechaFin.value))!);
 
+    // Realizar la exportación redirigiendo a la URL con los parámetros filtrados
     window.location.href = `/exportar-pedidos?${params.toString()}`;
     cerrarExportModal();
 };
+const generarPDFAdmin = async (pedidoId: number) => {
+    if (!pedidoId) {
+        console.error('El ID del pedido no está definido');
+        return;
+    }
+
+    try {
+        const response = await axios.get(`/pedido/${pedidoId}/admin-pdf`, { responseType: 'blob' });
+
+        // Crear un objeto URL a partir del blob recibido
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+
+        // Abrir el PDF en una nueva pestaña
+        const pdfWindow = window.open(url, '_blank');
+
+        // Esperar a que el PDF se cargue y luego activar la impresión automática
+        pdfWindow?.addEventListener('load', () => {
+            pdfWindow?.print();
+        });
+
+    } catch (error) {
+        console.error('Error generando PDF del Admin:', error);
+    }
+};
 const toggleSeleccionarTodo = () => {
-  if (columnasSeleccionadas.value.length === 9) {
-    columnasSeleccionadas.value = [];
-  } else {
-    columnasSeleccionadas.value = ['ID', 'Fecha', 'Mesero', 'Estado', 'Producto', 'Cantidad', 'Comentario', 'Precio Unitario', 'Subtotal'];
-  }
+    if (columnasSeleccionadas.value.length === 9) {
+        columnasSeleccionadas.value = [];
+    } else {
+        columnasSeleccionadas.value = ['ID', 'Fecha', 'Mesero', 'Estado', 'Producto', 'Cantidad', 'Comentario', 'Precio Unitario', 'Subtotal'];
+    }
 };
 
 </script>
@@ -427,6 +468,84 @@ const toggleSeleccionarTodo = () => {
                     <button @click="exportarSeleccionExcel"
                         class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded shadow">
                         Exportar
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Modal de Confirmación para Restaurar Pedido -->
+        <div v-if="showRehacerModal" class="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl max-w-md w-full">
+                <h2 class="text-lg font-semibold mb-4 text-[#593E25] dark:text-[#d9a679]">¿Estás seguro de que deseas
+                    restaurar este pedido?</h2>
+                <div class="flex justify-end gap-2">
+                    <button @click="showRehacerModal = false"
+                        class="px-4 py-2 text-sm rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
+                        Cancelar
+                    </button>
+                    <button @click="rehacerPedido"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded shadow">
+                        Confirmar Restauración
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Modal de Resumen del Pedido -->
+        <div v-if="showResumen && pedidoSeleccionado"
+            class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] rounded-lg p-6 shadow-xl w-full max-w-md">
+                <h2 class="text-lg font-bold mb-4">Resumen del Pedido #{{ pedidoSeleccionado.id_pedido }}</h2>
+
+                <!-- Detalles de los productos -->
+                <ul class="divide-y divide-[#c5a880] dark:divide-[#8c5c3b] max-h-64 overflow-y-auto mb-4">
+                    <li v-for="item in pedidoSeleccionado.detallepedidos" :key="item.id_producto" class="py-2">
+                        <div class="flex justify-between">
+                            <div>
+                                <p class="font-medium">{{ item.producto.nombre }}</p>
+                                <p class="text-xs text-gray-500">Cantidad: {{ item.cantidad }}</p>
+                                <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">
+                                    "{{ item.comentario }}"</p>
+                            </div>
+                            <p class="font-semibold">{{ (item.producto.precio * item.cantidad).toFixed(2) }} Bs</p>
+                        </div>
+                    </li>
+                </ul>
+
+                <!-- Total del pedido -->
+                <div class="flex justify-between font-bold border-t pt-2">
+                    <p>Total:</p>
+                    <p>
+                        {{
+                            pedidoSeleccionado.detallepedidos
+                                // @ts-ignore:
+                                .reduce((sum, item) => sum + item.producto.precio * item.cantidad, 0)
+                                .toFixed(2)
+                        }} Bs
+                    </p>
+                </div>
+
+                <!-- Botón para cerrar el modal -->
+                <div class="flex justify-end mt-4">
+                    <button @click="cerrarResumen"
+                        class="px-4 py-2 rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Confirmación para Cancelar Pedido -->
+        <div v-if="showCancelarModal" class="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl max-w-md w-full">
+                <h2 class="text-lg font-semibold mb-4 text-[#593E25] dark:text-[#d9a679]">¿Estás seguro de que deseas
+                    cancelar este pedido?</h2>
+                <div class="flex justify-end gap-2">
+                    <button @click="showCancelarModal = false"
+                        class="px-4 py-2 text-sm rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
+                        Cancelar
+                    </button>
+                    <button @click="cancelarPedido"
+                        class="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded shadow">
+                        Confirmar Cancelación
                     </button>
                 </div>
             </div>
