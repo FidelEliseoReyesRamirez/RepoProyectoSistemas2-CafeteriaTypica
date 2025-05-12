@@ -10,52 +10,93 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use App\Models\Pedido;  // Asegúrate de que la relación Pedido esté bien definida
-use Illuminate\Support\Facades\Log;  
+use Illuminate\Support\Facades\Log;
+
 class AllPedidosExportController extends Controller
 {
-    public function export(Request $request)
+   public function export(Request $request)
 {
-    // Establece las columnas predeterminadas si no se envían desde el frontend
-    $columnas = $request->input('columnas', ['ID', 'Fecha', 'Mesero']); // Ejemplo de columnas predeterminadas
-    
-    $inicio = $request->input('fecha_inicio');
-    $fin = $request->input('fecha_fin');
-
-    // Registra en el log las columnas y fechas seleccionadas
-    Log::info('Columnas seleccionadas: ', $columnas);
-    Log::info('Fechas de filtro: Inicio - ' . $inicio . ', Fin - ' . $fin);
-
-    // Filtra los pedidos
-    $pedidos = Pedido::with([
+    // Establecer los filtros de acuerdo con los parámetros
+    $pedidosQuery = Pedido::with([
         'usuario',
         'detallepedidos.producto',
         'pago' => fn($query) => $query->where('eliminado', false)
-    ])
-    ->when($inicio && $fin, fn($q) => $q->whereBetween('fecha_hora_registro', [$inicio, $fin]))
-    ->when($inicio && !$fin, fn($q) => $q->whereDate('fecha_hora_registro', $inicio))
-    ->get();
+    ]);
 
-    // Verifica si los pedidos se están obteniendo correctamente
-    Log::info('Pedidos obtenidos: ', $pedidos->toArray());
+    // Aplicar los filtros de la solicitud
+    if ($estado = $request->input('estado')) {
+        $pedidosQuery->whereHas('estadopedido', function ($query) use ($estado) {
+            $query->where('nombre_estado', $estado);
+        });
+    }
 
-    // Crea una nueva instancia de PhpSpreadsheet
+    if ($numero = $request->input('numero')) {
+        $pedidosQuery->where('id_pedido', 'like', "%$numero%");
+    }
+
+    if ($inicio = $request->input('fecha_inicio')) {
+        $pedidosQuery->whereDate('fecha_hora_registro', '>=', $inicio);
+    }
+
+    if ($fin = $request->input('fecha_fin')) {
+        $pedidosQuery->whereDate('fecha_hora_registro', '<=', $fin);
+    }
+
+    // Aplicar el filtro de tiempo
+    if ($tiempo = $request->input('tiempo')) {
+        $ahora = now();
+        switch ($tiempo) {
+            case 'ultima_hora':
+                $pedidosQuery->where('fecha_hora_registro', '>=', $ahora->subHour());
+                break;
+            case 'ultimas_2':
+                $pedidosQuery->where('fecha_hora_registro', '>=', $ahora->subHours(2));
+                break;
+            case 'hoy':
+                $pedidosQuery->whereDate('fecha_hora_registro', $ahora->toDateString());
+                break;
+            case 'ultimas_24':
+                $pedidosQuery->where('fecha_hora_registro', '>=', $ahora->subDay());
+                break;
+            case 'ultimos_2_dias':
+                $pedidosQuery->where('fecha_hora_registro', '>=', $ahora->subDays(2));
+                break;
+            case 'ultima_semana':
+                $pedidosQuery->where('fecha_hora_registro', '>=', $ahora->subWeek());
+                break;
+            case 'este_mes':
+                $pedidosQuery->whereMonth('fecha_hora_registro', $ahora->month)
+                             ->whereYear('fecha_hora_registro', $ahora->year);
+                break;
+            case 'rango_fechas':
+                if ($inicio && $fin) {
+                    $pedidosQuery->whereBetween('fecha_hora_registro', [$inicio, $fin]);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    // Aplicar filtro de mesero
+    if ($mesero = $request->input('mesero')) {
+        $pedidosQuery->whereHas('usuario', function ($query) use ($mesero) {
+            $query->where('nombre', 'like', "%$mesero%");
+        });
+    }
+
+    // Obtener los pedidos filtrados
+    $pedidos = $pedidosQuery->get();
+
+    // Crear el archivo Excel
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
 
-    // Establece el encabezado de las columnas
+    // Encabezado de las columnas
     $encabezado = ['ID', 'Fecha', 'Mesero', 'Estado', 'Producto', 'Cantidad', 'Comentario', 'Precio Unitario', 'Subtotal'];
-    // Filtra las columnas de acuerdo con las seleccionadas
-    $columnasValidas = array_values(array_filter($encabezado, fn($col) => in_array($col, $columnas)));
-    $sheet->fromArray($columnasValidas, null, 'A1');
+    $sheet->fromArray($encabezado, null, 'A1');
 
-    // Aplica estilos al encabezado
-    $sheet->getStyle('A1:' . Coordinate::stringFromColumnIndex(count($columnasValidas)) . '1')->applyFromArray([
-        'font' => ['bold' => true],
-        'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'e6d3ba']],
-        'borders' => ['allBorders' => ['borderStyle' => 'thin']],
-    ]);
-
-    // Llena las filas con los datos de los pedidos
+    // Llenar las filas con los datos de los pedidos
     $row = 2;
     foreach ($pedidos as $pedido) {
         foreach ($pedido->detallepedidos as $detalle) {
@@ -70,45 +111,48 @@ class AllPedidosExportController extends Controller
                 'Precio Unitario' => $detalle->precio_unitario,
                 'Subtotal' => $detalle->precio_unitario * $detalle->cantidad,
             ];
-            $datos = [];
-            foreach ($columnasValidas as $col) {
-                $datos[] = $linea[$col] ?? '';
-            }
-            $sheet->fromArray($datos, null, "A{$row}");
+            $sheet->fromArray($linea, null, "A{$row}");
             $row++;
         }
     }
 
-    // Aplica estilos a las filas de datos
-    $sheet->getStyle("A2:" . Coordinate::stringFromColumnIndex(count($columnasValidas)) . ($row - 1))
-        ->applyFromArray(['borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]]);
-
-    // Calcula el total
+    // Añadir fila de total (suma) al final
     $sheet->setCellValue("A{$row}", 'TOTAL');
-    $ultimaCol = Coordinate::stringFromColumnIndex(count($columnasValidas));
-    $sheet->setCellValue("{$ultimaCol}{$row}", "=SUM({$ultimaCol}2:{$ultimaCol}" . ($row - 1) . ")");
-    $sheet->getStyle("A{$row}:{$ultimaCol}{$row}")
-        ->applyFromArray([
-            'font' => ['bold' => true],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'f5ebe0']],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-        ]);
+    $ultimaColumna = Coordinate::stringFromColumnIndex(count($encabezado));
+    $sheet->setCellValue("{$ultimaColumna}{$row}", "=SUM({$ultimaColumna}2:{$ultimaColumna}" . ($row - 1) . ")");
 
-    // Ajusta el tamaño de las columnas
-    foreach (range(0, count($columnasValidas) - 1) as $i) {
-        $sheet->getColumnDimensionByColumn($i + 1)->setAutoSize(true);
+    // Estilo para la fila de total
+    $sheet->getStyle("A{$row}:{$ultimaColumna}{$row}")->applyFromArray([
+        'font' => ['bold' => true],
+        'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => 'f5ebe0']],
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+    ]);
+
+    // Ajuste de las columnas para el formato de Excel
+    foreach (range(0, count($encabezado) - 1) as $i) {
+        // Limitar el ancho de la columna de comentarios a un máximo de 30 caracteres
+        if ($i == 6) {  // Columna de 'Comentario' (índice 6)
+            $sheet->getColumnDimensionByColumn($i + 1)->setWidth(30);
+        } else {
+            $sheet->getColumnDimensionByColumn($i + 1)->setAutoSize(true);
+        }
     }
 
-    // Crea el escritor de Excel
+    // Estilo para las filas de datos
+    $sheet->getStyle("A2:" . Coordinate::stringFromColumnIndex(count($encabezado)) . ($row - 1))
+        ->applyFromArray(['borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]]]);
+
+    // Crear el escritor de Excel
     $writer = new Xlsx($spreadsheet);
 
-    // Retorna el archivo Excel como respuesta para su descarga
+    // Enviar el archivo Excel como respuesta para la descarga
     return new StreamedResponse(function () use ($writer) {
         $writer->save('php://output');
     }, 200, [
         'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition' => 'attachment;filename="pedidos.xlsx"',
+        'Content-Disposition' => 'attachment;filename="pedidos_filtrados.xlsx"',
         'Cache-Control' => 'max-age=0',
     ]);
 }
+
 }

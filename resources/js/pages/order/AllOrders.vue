@@ -276,8 +276,8 @@ const exportarSeleccionExcel = () => {
     // Añadir los filtros activos
     if (filtroNumero.value) params.set('numero', filtroNumero.value);
     if (filtroEstado.value) params.set('estado', filtroEstado.value);
-    if (filtroTiempo.value) params.set('tiempo', filtroTiempo.value);
-    if (filtroMesero.value) params.set('mesero', filtroMesero.value);
+    if (filtroTiempo.value) params.set('tiempo', filtroTiempo.value); // Asegúrate de enviar el filtro de tiempo
+    if (filtroMesero.value) params.set('mesero', filtroMesero.value); // Asegúrate de enviar el filtro de mesero
 
     // Si se ha seleccionado un rango de fechas, añadir las fechas de inicio y fin
     if (fechaInicio.value) params.set('fecha_inicio', formatDate(new Date(fechaInicio.value))!);
@@ -287,6 +287,8 @@ const exportarSeleccionExcel = () => {
     window.location.href = `/exportar-pedidos?${params.toString()}`;
     cerrarExportModal();
 };
+
+
 const generarPDFAdmin = async (pedidoId: number) => {
     if (!pedidoId) {
         console.error('El ID del pedido no está definido');
