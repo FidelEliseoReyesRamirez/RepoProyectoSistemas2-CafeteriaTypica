@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use App\Http\Middleware\IsAdmin;
-
+use App\Http\Controllers\PedidoController;
 
 // Ruta para Dashboard, solo accesible para admin
 Route::get('/dashboard', function () {
@@ -47,6 +47,11 @@ Route::middleware(['auth', 'verified', 'is_admin'])->group(function () {
     Route::get('/users/{id}/edit', [UsuarioController::class, 'edit'])->name('users.edit');
     Route::put('/users/{id}', [UsuarioController::class, 'update'])->name('users.update');
     Route::put('/users/{id}/unblock', [UsuarioController::class, 'desbloquear'])->name('users.unblock');
+    Route::put('/order/{id}/cambiar-estado', [PedidoController::class, 'cambiarEstado']);
+    Route::get('/all-orders', [PedidoController::class, 'allOrders'])->name('orders.all');
+    Route::get('/api/all-orders', [PedidoController::class, 'allOrdersJson']);
+    Route::get('/api/estados-pedido', [PedidoController::class, 'getEstadosPedido']);
+
 });
 
 //PRODUCTOS
@@ -67,7 +72,7 @@ Route::middleware(['auth', 'verified', 'is_admin_or_kitchen'])->group(function (
 
 
 //PEDIDOS
-use App\Http\Controllers\PedidoController;
+
 
 Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
     Route::get('/order', [PedidoController::class, 'crear'])->name('order.index');
@@ -79,8 +84,6 @@ Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
     Route::put('/order/{id}', [PedidoController::class, 'actualizar'])->name('order.update');
     Route::put('/order/{id}/cancelar', [PedidoController::class, 'cancelar'])->name('pedido.cancelar');
     Route::put('/order/{id}/rehacer', [PedidoController::class, 'rehacer']);
-    Route::get('/all-orders', [PedidoController::class, 'allOrders'])->name('orders.all');
-    Route::get('/api/all-orders', [PedidoController::class, 'allOrdersJson']);
 });
 
 use Illuminate\Support\Facades\Auth;
@@ -144,16 +147,17 @@ Route::middleware(['auth', 'verified', 'is_admin_or_kitchen'])->group(function (
     Route::get('/kitchen-orders', [KitchenController::class, 'vista'])->name('kitchen.view');
     Route::get('/api/kitchen-orders', [KitchenController::class, 'index']);
     Route::put('/api/kitchen-orders/{id}/estado', [KitchenController::class, 'cambiarEstado']);
-Route::get('/kitchen-orders/canceled', [KitchenOrderController::class, 'canceled'])->name('kitchen.canceled');
-Route::get('/kitchen-orders/delivered', [KitchenOrderController::class, 'delivered'])->name('kitchen.delivered');
-Route::get('/kitchen-orders/completed', [KitchenOrderController::class, 'completed'])->name('kitchen.completed');
-
+    Route::get('/kitchen-orders/canceled', [KitchenOrderController::class, 'canceled'])->name('kitchen.canceled');
+    Route::get('/kitchen-orders/delivered', [KitchenOrderController::class, 'delivered'])->name('kitchen.delivered');
+    Route::get('/kitchen-orders/completed', [KitchenOrderController::class, 'completed'])->name('kitchen.completed');
 });
 
 Route::get('/pedido/{id}/pdf', [PedidoControllerPDF::class, 'generarPDF'])->name('pedido.pdf');
 
 use App\Http\Controllers\PedidoControllerAdminPDF;
+
 Route::get('/pedido/{id}/admin-pdf', [PedidoControllerAdminPDF::class, 'generarPDF'])->name('pedido.admin_pdf');
 
 use App\Http\Controllers\AllPedidosExportController;
+
 Route::get('/exportar-pedidos', [AllPedidosExportController::class, 'export'])->name('pedidos.export');

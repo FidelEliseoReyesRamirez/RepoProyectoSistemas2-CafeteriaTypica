@@ -16,7 +16,7 @@ use App\Models\ConfigEstadoPedido;
 use App\Models\ConfigHorarioAtencion;
 use Carbon\Carbon;
 use App\Models\Pago;
-
+use Illuminate\Support\Facades\Log;
 class PedidoController extends Controller
 {
     public function crear()
@@ -634,4 +634,30 @@ class PedidoController extends Controller
             ];
         }));
     }
+    public function cambiarEstado(Request $request, $id)
+    {
+        $request->validate([
+            'estado_id' => ['required', 'exists:estadopedido,id_estado'],
+        ]);
+
+        $pedido = Pedido::findOrFail($id);
+        $pedido->update(['estado_actual' => $request->estado_id]);
+
+        $nuevo = Estadopedido::findOrFail($request->estado_id);
+        $this->registrarAuditoria(
+            'Cambiar estado',
+            Auth::user()->nombre
+                . " cambió el estado del pedido #{$pedido->id_pedido} a {$nuevo->nombre_estado}"
+        );
+
+        return response()->json([
+            'nombre_estado' => $nuevo->nombre_estado,
+            'color_codigo'  => $nuevo->color_codigo,
+        ]);
+    }
+    public function getEstadosPedido()
+{
+    $estados = Estadopedido::select('id_estado','nombre_estado','color_codigo')->get();
+    return response()->json($estados);
+}
 }

@@ -321,6 +321,54 @@ const toggleSeleccionarTodo = () => {
     }
 };
 
+// --- refs para el modal y datos de estados ---
+const showCambiarEstadoModal = ref(false);
+const estadosPedido = ref<{ id_estado: number; nombre_estado: string; color_codigo: string }[]>([]);
+const estadoSeleccionado = ref<number | null>(null);
+const pedidoCambioId = ref<number | null>(null);
+
+// --- cargar todos los estados al montar ---
+onMounted(async () => {
+  try {
+    const res = await axios.get('/api/estados-pedido');
+    estadosPedido.value = res.data;
+  } catch (err) {
+    console.error('>> Error fetching /api/estados-pedido:', err);
+  }
+});
+
+// --- abrir modal: inicializa seleccionando por nombre_estado ---
+const abrirCambiarEstado = (id: number) => {
+  pedidoCambioId.value = id;
+  const pedido = orders.value.find(o => o.id_pedido === id);
+  // busco el id_estado que coincide con el nombre actual
+  const match = estadosPedido.value.find(e => e.nombre_estado === pedido?.estadopedido.nombre_estado);
+  estadoSeleccionado.value = match?.id_estado ?? null;
+  showCambiarEstadoModal.value = true;
+};
+
+// --- cerrar modal ---
+const cerrarCambiarEstado = () => {
+  showCambiarEstadoModal.value = false;
+  pedidoCambioId.value = null;
+};
+
+// --- enviar cambio al servidor y refrescar lista ---
+const confirmarCambioEstado = async () => {
+  if (!pedidoCambioId.value || !estadoSeleccionado.value) return;
+  try {
+    const res = await axios.put(`/order/${pedidoCambioId.value}/cambiar-estado`, {
+      estado_id: estadoSeleccionado.value,
+    });
+    
+    await actualizarPedidos();
+    cerrarCambiarEstado();
+  } catch (err: any) {              // ← y aquí
+    console.error('>> Error PUT /order/.../cambiar-estado:', err.response ?? err);
+  }
+};
+
+
 </script>
 
 <template>
@@ -434,12 +482,39 @@ const toggleSeleccionarTodo = () => {
                                 class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1 rounded shadow">
                                 Restaurar
                             </button>
+                            <button @click="abrirCambiarEstado(order.id_pedido)"
+                                class="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1 rounded shadow">
+                                Cambiar estado
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <p v-else class="text-sm text-gray-600">No se encontraron pedidos con los filtros aplicados.</p>
+        </div>
+        <!-- Modal de Cambio de Estado -->
+        <div v-if="showCambiarEstadoModal" class="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl max-w-sm w-full">
+                <h2 class="text-lg font-semibold mb-4 text-[#593E25] dark:text-[#d9a679]">
+                    Cambiar estado del Pedido #{{ pedidoCambioId }}
+                </h2>
+                <select v-model="estadoSeleccionado" class="border text-black rounded px-3 py-2 w-full mb-4">
+                    <option v-for="e in estadosPedido" :key="e.id_estado" :value="e.id_estado">
+                        {{ e.nombre_estado }}
+                    </option>
+                </select>
+                <div class="flex justify-end gap-2">
+                    <button @click="cerrarCambiarEstado"
+                        class="px-4 py-2 rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
+                        Cancelar
+                    </button>
+                    <button @click="confirmarCambioEstado"
+                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded shadow">
+                        Guardar
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Modal Selección de Columnas -->
