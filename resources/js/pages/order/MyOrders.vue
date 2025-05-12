@@ -73,7 +73,7 @@ onMounted(() => {
     console.log('Estados cancelables:', estadosCancelables.value);
     console.log('Estados editables:', estadosEditables.value);
     console.log('Tiempos por estado:', tiemposPorEstado.value);
-    
+
 });
 
 
@@ -194,6 +194,13 @@ const filtrarPorTiempo = (fecha: string) => {
     const ahora = new Date();
     const fechaPedido = new Date(fecha);
 
+    if (filtroTiempo.value === 'rango_fechas' && fechaInicio.value && fechaFin.value && !isFechaFinalInvalid.value) {
+        const fechaIni = new Date(fechaInicio.value).getTime();
+        const fechaFinVal = new Date(fechaFin.value).getTime();
+        const fechaPedidoVal = fechaPedido.getTime();
+        return fechaPedidoVal >= fechaIni && fechaPedidoVal <= fechaFinVal;
+    }
+
     switch (filtroTiempo.value) {
         case 'ultima_hora':
             return ahora.getTime() - fechaPedido.getTime() <= 60 * 60 * 1000;
@@ -217,6 +224,8 @@ const filtrarPorTiempo = (fecha: string) => {
     }
 };
 
+
+
 const pedidosFiltrados = computed(() => {
     return orders.value.filter(order => {
         const coincideNumero = !filtroNumero.value || order.id_pedido.toString().includes(filtroNumero.value);
@@ -224,7 +233,25 @@ const pedidosFiltrados = computed(() => {
         const coincideTiempo = filtrarPorTiempo(order.fecha_hora_registro);
         return coincideNumero && coincideEstado && coincideTiempo;
     });
-});
+}); const fechaInicio = ref<string | null>(null);
+const fechaFin = ref<string | null>(null);
+const isFechaFinalInvalid = ref(false);
+
+// Función para validar las fechas
+const validarFechas = () => {
+    if (fechaInicio.value && fechaFin.value) {
+        const fechaIni = new Date(fechaInicio.value).getTime();
+        const fechaFinVal = new Date(fechaFin.value).getTime();
+
+        // Si la fecha de inicio es mayor que la fecha de fin, la fecha final se marca como inválida
+        if (fechaIni > fechaFinVal) {
+            isFechaFinalInvalid.value = true;
+        } else {
+            isFechaFinalInvalid.value = false;
+        }
+    }
+};
+
 
 </script>
 
@@ -262,7 +289,22 @@ const pedidosFiltrados = computed(() => {
                     <option value="ultimos_2_dias">Últimos 2 días</option>
                     <option value="ultima_semana">Últimos 7 días</option>
                     <option value="este_mes">Este mes</option>
+                    <option value="rango_fechas">Rango de fechas</option>
                 </select>
+                <!-- Rango de fechas -->
+                <div v-if="filtroTiempo === 'rango_fechas'" class="flex gap-4 mt-4">
+                    <input type="date" v-model="fechaInicio" @change="validarFechas"
+                        class="border text-black rounded px-3 py-2 text-sm w-full md:w-48" />
+
+                    <!-- Deshabilitar el campo de fecha final si es inválido -->
+                    <input type="date" v-model="fechaFin" :disabled="isFechaFinalInvalid" @change="validarFechas"
+                        class="border text-black rounded px-3 py-2 text-sm w-full md:w-48" />
+
+                    <!-- Mensaje de error si las fechas no son válidas -->
+                    <div v-if="isFechaFinalInvalid" class="text-red-500 text-sm mt-2">
+                        La fecha final no puede ser anterior a la fecha de inicio.
+                    </div>
+                </div>
 
                 <!-- Botón para limpiar filtros -->
                 <button @click="() => { filtroNumero = ''; filtroEstado = ''; filtroTiempo = '' }"
@@ -292,7 +334,7 @@ const pedidosFiltrados = computed(() => {
                                     : 'text-black dark:text-black'"
                                     :style="{ backgroundColor: order.estadopedido.color_codigo }">
                                     {{ order.estadopedido.nombre_estado }}
-                                   
+
                                 </span>
                             </div>
                         </div>
