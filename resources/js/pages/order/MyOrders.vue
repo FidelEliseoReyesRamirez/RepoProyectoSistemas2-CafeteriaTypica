@@ -70,9 +70,10 @@ const estaEnHorario = (): boolean => {
 
 
 onMounted(() => {
-  console.log('Estados cancelables:', estadosCancelables.value);
-  console.log('Estados editables:', estadosEditables.value);
-  console.log('Tiempos por estado:', tiemposPorEstado.value);
+    console.log('Estados cancelables:', estadosCancelables.value);
+    console.log('Estados editables:', estadosEditables.value);
+    console.log('Tiempos por estado:', tiemposPorEstado.value);
+    
 });
 
 
@@ -184,8 +185,11 @@ const filtroEstado = ref('');
 const filtroTiempo = ref('');
 
 const estadosDisponibles = computed(() => {
-    return [...new Set(props.orders.map(order => order.estadopedido.nombre_estado))];
+    const estados = [...new Set(props.orders.map(order => order.estadopedido.nombre_estado))];
+    console.log('Estados disponibles:', estados);  // Aquí lo puedes ver
+    return estados;
 });
+
 
 const filtrarPorTiempo = (fecha: string) => {
     const ahora = new Date();
@@ -222,6 +226,7 @@ const pedidosFiltrados = computed(() => {
         return coincideNumero && coincideEstado && coincideTiempo;
     });
 });
+
 </script>
 
 
@@ -288,6 +293,7 @@ const pedidosFiltrados = computed(() => {
                                     : 'text-black dark:text-black'"
                                     :style="{ backgroundColor: order.estadopedido.color_codigo }">
                                     {{ order.estadopedido.nombre_estado }}
+                                   
                                 </span>
                             </div>
                         </div>
@@ -297,21 +303,20 @@ const pedidosFiltrados = computed(() => {
                                 class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded shadow">
                                 Ver resumen
                             </button>
-<!-- Editar solo si permitido -->
-<button
-  v-if="puedeEditar(order.fecha_hora_registro, order.estadopedido.nombre_estado)"
-  @click="confirmarEditar(order.id_pedido)"
-  class="bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-3 py-1 rounded shadow">
-  Editar
-</button>
+                            <!-- Editar solo si permitido -->
+                            <button v-if="puedeEditar(order.fecha_hora_registro, order.estadopedido.nombre_estado)"
+                                @click="confirmarEditar(order.id_pedido)"
+                                class="bg-yellow-600 hover:bg-yellow-700 text-white text-xs px-3 py-1 rounded shadow">
+                                Editar
+                            </button>
 
-<!-- Cancelar solo si permitido -->
-<button
-  v-if="order.estadopedido.nombre_estado !== 'Cancelado' && puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)"
-  @click="confirmarCancelar(order.id_pedido)"
-  class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow">
-  Cancelar
-</button>
+                            <!-- Cancelar solo si permitido -->
+                            <button
+                                v-if="order.estadopedido.nombre_estado !== 'Cancelado' && puedeCancelar(order.fecha_hora_registro, order.estadopedido.nombre_estado)"
+                                @click="confirmarCancelar(order.id_pedido)"
+                                class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1 rounded shadow">
+                                Cancelar
+                            </button>
 
 
                             <button v-if="order.estadopedido.nombre_estado === 'Cancelado'"
@@ -355,7 +360,7 @@ const pedidosFiltrados = computed(() => {
                     <p>
                         {{
                             pedidoSeleccionado.detallepedidos
-                            // @ts-ignore:
+                                // @ts-ignore:
                                 .reduce((sum, item) => sum + item.producto.precio * item.cantidad, 0)
                                 .toFixed(2)
                         }} Bs

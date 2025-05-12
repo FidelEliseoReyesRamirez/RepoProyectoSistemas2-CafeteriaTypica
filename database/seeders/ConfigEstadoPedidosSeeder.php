@@ -14,7 +14,7 @@ class ConfigEstadoPedidosSeeder extends Seeder
         $estados = [
             ['estado' => 'Pendiente', 'puede_cancelar' => true, 'puede_editar' => true],
             ['estado' => 'En preparación', 'puede_cancelar' => false, 'puede_editar' => true],
-            ['estado' => 'Listo', 'puede_cancelar' => false, 'puede_editar' => false],
+            ['estado' => 'Listo para servir', 'puede_cancelar' => false, 'puede_editar' => false],
             ['estado' => 'Entregado', 'puede_cancelar' => false, 'puede_editar' => false],
             ['estado' => 'Cancelado', 'puede_cancelar' => false, 'puede_editar' => false],
             ['estado' => 'Modificado', 'puede_cancelar' => false, 'puede_editar' => false],

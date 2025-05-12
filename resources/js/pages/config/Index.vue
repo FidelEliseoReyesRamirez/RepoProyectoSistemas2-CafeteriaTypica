@@ -132,6 +132,12 @@ const config = page.props.config
 const tiempoCancelacion = ref<number>(config?.tiempo_cancelacion_minutos ?? 5)
 const tiempoEdicion = ref<number>(config?.tiempo_edicion_minutos ?? 10)
 const estados = ref(config?.estados ?? [])
+console.log('Nombres de los estados recibidos desde la configuración:');
+estados.value.forEach((estado: { estado: any; }) => {
+    console.log(estado.estado); // Suponiendo que 'estado' tiene la propiedad 'estado' que es el nombre del estado
+});
+
+
 
 const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
