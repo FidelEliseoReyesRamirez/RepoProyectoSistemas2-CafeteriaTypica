@@ -154,3 +154,6 @@ Route::get('/pedido/{id}/pdf', [PedidoControllerPDF::class, 'generarPDF'])->name
 
 use App\Http\Controllers\PedidoControllerAdminPDF;
 Route::get('/pedido/{id}/admin-pdf', [PedidoControllerAdminPDF::class, 'generarPDF'])->name('pedido.admin_pdf');
+
+use App\Http\Controllers\AllPedidosExportController;
+Route::get('/exportar-pedidos', [AllPedidosExportController::class, 'export'])->name('pedidos.export');

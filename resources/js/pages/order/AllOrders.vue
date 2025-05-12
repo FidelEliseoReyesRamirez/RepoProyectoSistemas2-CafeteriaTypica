@@ -3,6 +3,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { PageProps } from '@/types';
+import axios from 'axios';
 
 const page = usePage<PageProps>();
 const authUser = computed(() => page.props.auth?.user ?? null);
@@ -44,9 +45,9 @@ const props = defineProps<{
     }[];
 }>();
 
-
 const orders = ref(props.orders);
 const previousStates = ref<Record<number, string>>({});
+
 const selectedOrder = ref<number | null>(null);
 const showResumen = ref(false);
 
@@ -73,9 +74,6 @@ const estaEnHorario = (): boolean => {
     return horaActual >= h.hora_inicio.slice(0, 5) && horaActual <= h.hora_fin.slice(0, 5);
 };
 
-
-
-
 const puedeCancelar = (orderDate: string, estado: string): boolean => {
     if (!authUser.value || !estaEnHorario()) return false;
     const rol = authUser.value.id_rol;
@@ -98,7 +96,6 @@ const puedeEditar = (orderDate: string, estado: string): boolean => {
     return limite === 0 || diferencia <= limite;
 };
 
-
 const actualizarPedidos = async () => {
     try {
         const response = await fetch('/api/all-orders'); // Usa esta URL
@@ -115,7 +112,6 @@ const actualizarPedidos = async () => {
         console.error('Error actualizando pedidos:', error);
     }
 };
-
 
 let intervaloActualizacion: number;
 
@@ -161,7 +157,6 @@ const confirmarEditar = (id: number) => {
     router.visit(`/order/edit/${id}`, { preserveState: true });
 };
 
-
 const cancelarPedido = () => {
     if (!pedidoConfirmacionId.value) return;
     router.put(`/order/${pedidoConfirmacionId.value}/cancelar`);
@@ -188,7 +183,6 @@ const filtrarPorTiempo = (fecha: string) => {
     const ahora = new Date();
     const fechaPedido = new Date(fecha);
 
-    // Filtrar por el rango de fechas
     if (filtroTiempo.value === 'rango_fechas' && fechaInicio.value && fechaFin.value && !isFechaFinalInvalid.value) {
         const fechaIni = new Date(fechaInicio.value).getTime();
         const fechaFinVal = new Date(fechaFin.value).getTime();
@@ -210,10 +204,7 @@ const filtrarPorTiempo = (fecha: string) => {
         case 'ultima_semana':
             return ahora.getTime() - fechaPedido.getTime() <= 7 * 24 * 60 * 60 * 1000;
         case 'este_mes':
-            return (
-                fechaPedido.getMonth() === ahora.getMonth() &&
-                fechaPedido.getFullYear() === ahora.getFullYear()
-            );
+            return fechaPedido.getMonth() === ahora.getMonth() && fechaPedido.getFullYear() === ahora.getFullYear();
         default:
             return true;
     }
@@ -235,43 +226,15 @@ const pedidosFiltrados = computed(() => {
         return coincideNumero && coincideEstado && coincideTiempo && coincideMesero;
     });
 });
-import axios from 'axios';
 
-const generarPDFAdmin = async (pedidoId: number) => {
-    if (!pedidoId) {
-        console.error('El ID del pedido no está definido');
-        return;
-    }
-
-    try {
-        const response = await axios.get(`/pedido/${pedidoId}/admin-pdf`, { responseType: 'blob' });
-
-        // Crear un objeto URL a partir del blob recibido
-        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-
-        // Abrir el PDF en una nueva pestaña
-        const pdfWindow = window.open(url, '_blank');
-
-        // Esperar a que el PDF se cargue y luego activar la impresión automática
-        pdfWindow?.addEventListener('load', () => {
-            pdfWindow?.print();
-        });
-
-    } catch (error) {
-        console.error('Error generando PDF del Admin:', error);
-    }
-};
 const fechaInicio = ref<string | null>(null);
 const fechaFin = ref<string | null>(null);
 const isFechaFinalInvalid = ref(false);
 
-// Función para validar las fechas
 const validarFechas = () => {
     if (fechaInicio.value && fechaFin.value) {
         const fechaIni = new Date(fechaInicio.value).getTime();
         const fechaFinVal = new Date(fechaFin.value).getTime();
-
-        // Si la fecha de inicio es mayor que la fecha de fin, la fecha final se marca como inválida
         if (fechaIni > fechaFinVal) {
             isFechaFinalInvalid.value = true;
         } else {
@@ -279,29 +242,62 @@ const validarFechas = () => {
         }
     }
 };
-</script>
 
+const columnasSeleccionadas = ref<string[]>([]);
+
+// Definir la función formatDate para formatear la fecha a 'yyyy-MM-dd'
+const formatDate = (date?: Date): string | null => {
+    return date ? date.toISOString().split('T')[0] : null;
+};
+
+const exportarExcel = () => {
+    // Abre el modal cuando se hace clic en el botón de exportar
+    showExportModal.value = true;
+};
+
+const showExportModal = ref(false);
+
+const cerrarExportModal = () => {
+    showExportModal.value = false;
+};
+
+const exportarSeleccionExcel = () => {
+    const params = new URLSearchParams();
+    columnasSeleccionadas.value.forEach(col => params.append('columnas[]', col));
+    if (fechaInicio.value) params.set('fecha_inicio', formatDate(new Date(fechaInicio.value))!);
+    if (fechaFin.value) params.set('fecha_fin', formatDate(new Date(fechaFin.value))!);
+
+    window.location.href = `/exportar-pedidos?${params.toString()}`;
+    cerrarExportModal();
+};
+const toggleSeleccionarTodo = () => {
+  if (columnasSeleccionadas.value.length === 9) {
+    columnasSeleccionadas.value = [];
+  } else {
+    columnasSeleccionadas.value = ['ID', 'Fecha', 'Mesero', 'Estado', 'Producto', 'Cantidad', 'Comentario', 'Precio Unitario', 'Subtotal'];
+  }
+};
+
+</script>
 
 <template>
     <AppLayout>
 
-        <Head title="All  Orders" />
+        <Head title="Todos los Pedidos" />
         <div class="p-4 sm:p-6 text-[#4b3621] dark:text-white">
             <div class="flex justify-between items-center mb-4">
                 <h1 class="text-2xl font-bold text-[#593E25] dark:text-[#d9a679]">Todos los Pedidos</h1>
             </div>
+
             <div class="mb-6 flex flex-col md:flex-row flex-wrap gap-4 items-start md:items-center">
-                <!-- Búsqueda por número -->
                 <input v-model="filtroNumero" type="text" placeholder="Buscar por # de pedido"
                     class="border text-black rounded px-3 py-2 text-sm w-full md:w-48" />
 
-                <!-- Filtrar por estado -->
                 <select v-model="filtroEstado" class="border text-black rounded px-3 py-2 text-sm w-full md:w-48">
                     <option value="">Todos los estados</option>
                     <option v-for="estado in estadosDisponibles" :key="estado" :value="estado">{{ estado }}</option>
                 </select>
 
-                <!-- Filtrar por tiempo -->
                 <select v-model="filtroTiempo" class="border text-black rounded px-3 py-2 text-sm w-full md:w-48">
                     <option value="">Todo el tiempo</option>
                     <option value="ultima_hora">Última hora</option>
@@ -313,29 +309,28 @@ const validarFechas = () => {
                     <option value="este_mes">Este mes</option>
                     <option value="rango_fechas">Rango de fechas</option>
                 </select>
-                <!-- Rango de fechas -->
+
                 <div v-if="filtroTiempo === 'rango_fechas'" class="flex gap-4 mt-4">
                     <input type="date" v-model="fechaInicio" @change="validarFechas"
                         class="border text-black rounded px-3 py-2 text-sm w-full md:w-48" />
-
-                    <!-- Deshabilitar el campo de fecha final si es inválido -->
                     <input type="date" v-model="fechaFin" :disabled="isFechaFinalInvalid" @change="validarFechas"
                         class="border text-black rounded px-3 py-2 text-sm w-full md:w-48" />
-
-                    <!-- Mensaje de error si las fechas no son válidas -->
                     <div v-if="isFechaFinalInvalid" class="text-red-500 text-sm mt-2">
                         La fecha final no puede ser anterior a la fecha de inicio.
                     </div>
                 </div>
 
-                <!-- Filtrar por mesero -->
                 <select v-model="filtroMesero" class="border text-black rounded px-3 py-2 text-sm w-full md:w-48">
                     <option value="">Todos los meseros</option>
                     <option v-for="mesero in meserosDisponibles" :key="mesero" :value="mesero">{{ mesero }}</option>
                 </select>
 
+                <button @click="exportarExcel"
+                    class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded shadow">
+                    Exportar a Excel
+                </button>
                 <button @click="() => { filtroNumero = ''; filtroEstado = ''; filtroTiempo = ''; filtroMesero = '' }"
-                    class="text-xs bg-red-500 hover:bg-red-600 text-white rounded px-3 py-2">
+                    class="text-sm bg-red-500 hover:bg-red-600 text-white rounded px-3 py-2">
                     Limpiar filtros
                 </button>
             </div>
@@ -369,13 +364,11 @@ const validarFechas = () => {
                             </div>
                         </div>
 
-
                         <div class="flex flex-col sm:flex-row gap-2 mt-2 sm:mt-0">
                             <button @click="generarPDFAdmin(order.id_pedido)"
                                 class="text-xs bg-[#800080] hover:bg-[#9b4dff] text-white rounded px-2 py-1">
                                 Exportar PDF
                             </button>
-
 
                             <button @click="abrirResumen(order.id_pedido)"
                                 class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded shadow">
@@ -398,103 +391,42 @@ const validarFechas = () => {
                                 class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1 rounded shadow">
                                 Restaurar
                             </button>
-
                         </div>
-
                     </div>
                 </div>
             </div>
 
             <p v-else class="text-sm text-gray-600">No se encontraron pedidos con los filtros aplicados.</p>
-
         </div>
 
-        <!-- Modal -->
-        <div v-if="showResumen && pedidoSeleccionado"
-            class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-[#2c211b] rounded-lg p-6 shadow-xl w-full max-w-md">
-                <h2 class="text-lg font-bold mb-4">Resumen del Pedido #{{ pedidoSeleccionado.id_pedido }}</h2>
-                <ul class="divide-y divide-[#c5a880] dark:divide-[#8c5c3b] max-h-64 overflow-y-auto mb-4">
-                    <li v-for="item in pedidoSeleccionado.detallepedidos" :key="item.id_producto" class="py-2">
-                        <div class="flex justify-between">
-                            <div>
-                                <p class="font-medium">{{ item.producto.nombre }}</p>
-                                <p class="text-xs text-gray-500">Cantidad: {{ item.cantidad }}</p>
-                                <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">
-                                    "{{ item.comentario }}"</p>
-                            </div>
-                            <p class="font-semibold">{{ (item.producto.precio * item.cantidad).toFixed(2) }} Bs</p>
-                        </div>
-                    </li>
-                </ul>
-
-                <!-- Total del pedido -->
-                <div class="flex justify-between font-bold border-t pt-2">
-                    <p>Total:</p>
-                    <p>
-                        {{
-                            pedidoSeleccionado.detallepedidos
-                                // @ts-ignore
-                                .reduce((sum, item) => sum + item.producto.precio * item.cantidad, 0)
-                                .toFixed(2)
-                        }} Bs
-                    </p>
+        <!-- Modal Selección de Columnas -->
+        <div v-if="showExportModal" class="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl max-w-md w-full">
+                <h2 class="text-lg font-semibold mb-4 text-[#593E25] dark:text-[#d9a679]">Selecciona las columnas a
+                    exportar</h2>
+                <div class="grid grid-cols-2 gap-2 mb-4 text-sm">
+                    <label
+                        v-for="col in ['ID', 'Fecha', 'Mesero', 'Estado', 'Producto', 'Cantidad', 'Comentario', 'Precio Unitario', 'Subtotal']"
+                        :key="col" class="flex items-center gap-1">
+                        <input type="checkbox" :value="col" v-model="columnasSeleccionadas"
+                            class="text-indigo-600 dark:text-indigo-400" />
+                        {{ col }}
+                    </label>
                 </div>
-
-                <div class="flex justify-end mt-4">
-                    <button @click="cerrarResumen"
-                        class="px-4 py-2 rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
-                        Cerrar
+                <div class="flex justify-between items-center mb-4">
+                    <button @click="toggleSeleccionarTodo"
+                        class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                        {{ columnasSeleccionadas.length === 9 ? 'Deseleccionar todo' : 'Seleccionar todo' }}
                     </button>
                 </div>
-            </div>
-        </div>
-
-        <div v-if="showCancelarModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl w-full max-w-md">
-                <h2 class="text-lg font-bold mb-4">¿Cancelar pedido?</h2>
-                <p class="text-sm mb-4">Una vez cancelado, este pedido ya no será procesado. ¿Está seguro?</p>
                 <div class="flex justify-end gap-2">
-                    <button @click="showCancelarModal = false"
-                        class="px-4 py-2 border rounded hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
-                        No
+                    <button @click="cerrarExportModal"
+                        class="px-4 py-2 text-sm rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
+                        Cancelar
                     </button>
-                    <button @click="cancelarPedido" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
-                        Sí, cancelar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-
-        <div v-if="showRehacerModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl w-full max-w-md">
-                <h2 class="text-lg font-bold mb-4">¿Rehacer pedido?</h2>
-                <p class="text-sm mb-4">El pedido se reenviará a cocina y será marcado como pendiente. ¿Está seguro?</p>
-                <div class="flex justify-end gap-2">
-                    <button @click="showRehacerModal = false"
-                        class="px-4 py-2 border rounded hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
-                        No
-                    </button>
-                    <button @click="rehacerPedido"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">
-                        Sí, rehacer
-                    </button>
-                </div>
-            </div>
-        </div>
-        <!-- Modal: fuera del horario de atención -->
-        <div v-if="showFueraHorarioModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl w-full max-w-md">
-                <h2 class="text-lg font-bold mb-4">Fuera del horario de atención</h2>
-                <p class="text-sm mb-4">
-                    Esta acción no puede realizarse en este momento porque estás fuera del horario de atención
-                    configurado.
-                </p>
-                <div class="flex justify-end">
-                    <button @click="cerrarFueraHorarioModal"
-                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
-                        Entendido
+                    <button @click="exportarSeleccionExcel"
+                        class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded shadow">
+                        Exportar
                     </button>
                 </div>
             </div>
