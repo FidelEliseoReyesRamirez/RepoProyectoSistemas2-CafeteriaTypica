@@ -17,6 +17,7 @@ class EstadoPedidoSeeder extends Seeder
             ['nombre_estado' => 'Cancelado', 'color_codigo' => '#FF0000', 'eliminado' => 0],
             ['nombre_estado' => 'Pagado', 'color_codigo' => '#800080', 'eliminado' => 0],
             ['nombre_estado' => 'Modificado', 'color_codigo' => '#FF69B4', 'eliminado' => 0],
+            ['nombre_estado' => 'Rechazado', 'color_codigo' => '#292423', 'eliminado' => 0],
         ]);        
     }
 }
