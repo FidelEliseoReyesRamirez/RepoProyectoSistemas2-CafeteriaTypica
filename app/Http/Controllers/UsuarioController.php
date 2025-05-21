@@ -138,6 +138,24 @@ class UsuarioController extends Controller
     {
         $usuario = Usuario::findOrFail($id);
 
+        $esAdminActual = $usuario->rol && strtolower($usuario->rol->nombre) === 'administrador';
+        $nuevoRol = Rol::find($request->id_rol);
+        $cambiaDeRol = $nuevoRol && strtolower($nuevoRol->nombre) !== 'administrador';
+
+        $adminsRestantes = Usuario::whereHas('rol', function ($query) {
+            $query->where('nombre', 'Administrador');
+        })->where('id_usuario', '!=', $id)
+            ->where('eliminado', 0)
+            ->count();
+
+        if ($esAdminActual && $cambiaDeRol && $adminsRestantes === 0) {
+            return back()->withErrors([
+                'rol_protegido' => 'No puedes cambiar el rol del último administrador del sistema.'
+            ]);
+        }
+
+
+
         $request->validate([
             'nombre' => ['required', 'regex:/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/'],
             'email' => [
@@ -158,6 +176,7 @@ class UsuarioController extends Controller
         $this->registrarAuditoria('Actualizar usuario', "$admin actualizó los datos del usuario {$usuario->nombre}");
         return redirect()->route('users.index')->with('success', 'Usuario actualizado correctamente.');
     }
+
 
     public function desbloquear($id)
     {
