@@ -17,6 +17,7 @@ use App\Models\ConfigHorarioAtencion;
 use Carbon\Carbon;
 use App\Models\Pago;
 use Illuminate\Support\Facades\Log;
+
 class PedidoController extends Controller
 {
     public function crear()
@@ -656,8 +657,8 @@ class PedidoController extends Controller
         ]);
     }
     public function getEstadosPedido()
-{
-    $estados = Estadopedido::select('id_estado','nombre_estado','color_codigo')->get();
-    return response()->json($estados);
-}
+    {
+        $estados = Estadopedido::select('id_estado', 'nombre_estado', 'color_codigo')->get();
+        return response()->json($estados);
+    }
 }

@@ -1,5 +1,6 @@
 <template>
     <AppLayout>
+
         <Head title="Configuración del sistema" />
 
         <div class="p-4 flex flex-col gap-6 text-[#4b3621] dark:text-white">
@@ -7,7 +8,8 @@
                 <!-- Tiempo para cancelar y editar -->
                 <div class="grid gap-4 md:grid-cols-2">
                     <div>
-                        <label class="block text-sm font-medium mb-1">Minutos para cancelar pedidos (Para meseros)</label>
+                        <label class="block text-sm font-medium mb-1">Minutos para cancelar pedidos (Para
+                            meseros)</label>
                         <input type="number" v-model.number="tiempoCancelacion" :disabled="sinLimiteCancelacion" min="0"
                             class="w-full rounded border px-3 py-2 text-sm dark:bg-[#2c211b] dark:text-white border-[#c5a880] dark:border-[#8c5c3b]"
                             @keypress="validarNumero" />
@@ -37,7 +39,8 @@
                 <div class="flex flex-col gap-2">
                     <h2 class="text-base font-bold">Estados</h2>
                     <p class="text-sm text-[#6b4f30] dark:text-gray-300">
-                        Define en qué estados se puede editar o cancelar un pedido. Estos límites aplican solo para meseros.
+                        Define en qué estados se puede editar o cancelar un pedido. Estos límites aplican solo para
+                        meseros.
                         <strong>El administrador puede hacerlo sin restricciones.</strong>
                     </p>
                     <div class="grid gap-4 md:grid-cols-2">
@@ -70,7 +73,8 @@
                 <!-- Horarios de atención -->
                 <div class="flex flex-col gap-2">
                     <h2 class="text-base font-bold">Horarios de atención</h2>
-                    <p class="text-sm text-[#6b4f30] dark:text-gray-300">Define los días y rangos horarios en los que se pueden registrar pedidos.</p>
+                    <p class="text-sm text-[#6b4f30] dark:text-gray-300">Define los días y rangos horarios en los que se
+                        pueden registrar pedidos.</p>
                     <div class="space-y-4">
                         <div v-for="horario in horarios" :key="horario.dia"
                             class="flex flex-col sm:flex-row items-center justify-between gap-4 border p-4 rounded-lg dark:bg-[#1d1b16] border-[#c5a880] dark:border-[#8c5c3b]">
@@ -119,9 +123,9 @@ import { Head, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
 import axios from 'axios'
 interface Horario {
-  dia: string;
-  hora_inicio: string;
-  hora_fin: string;
+    dia: string;
+    hora_inicio: string;
+    hora_fin: string;
 }
 
 

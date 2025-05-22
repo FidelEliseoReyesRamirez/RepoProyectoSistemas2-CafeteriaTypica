@@ -19,6 +19,7 @@ class ConfigEstadoPedidosSeeder extends Seeder
             ['estado' => 'Cancelado', 'puede_cancelar' => false, 'puede_editar' => false],
             ['estado' => 'Modificado', 'puede_cancelar' => false, 'puede_editar' => false],
             ['estado' => 'Pagado', 'puede_cancelar' => false, 'puede_editar' => false],
+            ['estado' => 'Rechazado', 'puede_cancelar' => false, 'puede_editar' => false],
         ];
 
         foreach ($estados as $estado) {
