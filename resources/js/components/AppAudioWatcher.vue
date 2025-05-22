@@ -2,31 +2,58 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const previousStates = ref<Record<number, string>>({});
-let audioBuffer: AudioBuffer | null = null;
 const audioContext = new AudioContext();
+const audioBuffers = new Map<string, AudioBuffer>();
 
-// Desbloquear el contexto de audio con el primer clic
+// Normaliza el nombre del estado
+const normalizarEstado = (estado: string) => {
+    const mapa: Record<string, string> = {
+        'listo para servir': 'listo',
+    };
+
+    const estadoNormal = estado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').trim();
+
+    return mapa[estadoNormal] ?? estadoNormal.replace(/\s+/g, '_');
+};
+
+
+// Desbloquea el contexto de audio
 const unlockAudioContext = () => {
     if (audioContext.state === 'suspended') {
         audioContext.resume();
     }
 };
 
-// Cargar el audio una sola vez
-const cargarAudio = async () => {
-    try {
-        const response = await fetch('/sounds/listo.mp3');
-        const arrayBuffer = await response.arrayBuffer();
-        audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    } catch (error) {
-        console.error('Error cargando el audio:', error);
+// Carga todos los audios
+const cargarAudios = async () => {
+    const estados = [
+        'pendiente',
+        'en_preparacion',
+        'listo',
+        'entregado',
+        'cancelado',
+        'pagado',
+        'modificado',
+        'rechazado',
+    ];
+
+    for (const estado of estados) {
+        try {
+            const response = await fetch(`/sounds/${estado}.mp3`);
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = await audioContext.decodeAudioData(arrayBuffer);
+            audioBuffers.set(estado, buffer);
+        } catch (error) {
+            console.warn(`No se pudo cargar el audio de estado: ${estado}`);
+        }
     }
 };
 
-const reproducirAudio = () => {
-    if (audioBuffer) {
+const reproducirAudio = (estado: string) => {
+    const buffer = audioBuffers.get(estado);
+    if (buffer) {
         const source = audioContext.createBufferSource();
-        source.buffer = audioBuffer;
+        source.buffer = buffer;
         source.connect(audioContext.destination);
         source.start(0);
     }
@@ -42,8 +69,9 @@ const actualizarPedidos = async () => {
             const anterior = previousStates.value[pedido.id_pedido];
             const actual = pedido.estadopedido.nombre_estado;
 
-            if (actual === 'Listo para servir' && anterior && anterior !== actual) {
-                reproducirAudio();
+            if (anterior && anterior !== actual) {
+                const estadoKey = normalizarEstado(actual);
+                reproducirAudio(estadoKey);
             }
 
             previousStates.value[pedido.id_pedido] = actual;
@@ -57,8 +85,8 @@ let intervalo: number;
 
 onMounted(() => {
     document.addEventListener('click', unlockAudioContext, { once: true });
-    cargarAudio();
-    actualizarPedidos(); // inicial
+    cargarAudios();
+    actualizarPedidos();
     intervalo = setInterval(actualizarPedidos, 1000);
 });
 
@@ -68,6 +96,5 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Este componente no renderiza nada visible -->
+    <!-- Este componente no tiene UI visible -->
 </template>
-
