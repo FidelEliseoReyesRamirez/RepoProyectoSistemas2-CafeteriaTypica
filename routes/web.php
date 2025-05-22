@@ -51,7 +51,6 @@ Route::middleware(['auth', 'verified', 'is_admin'])->group(function () {
     Route::get('/all-orders', [PedidoController::class, 'allOrders'])->name('orders.all');
     Route::get('/api/all-orders', [PedidoController::class, 'allOrdersJson']);
     Route::get('/api/estados-pedido', [PedidoController::class, 'getEstadosPedido']);
-
 });
 
 //PRODUCTOS
@@ -150,6 +149,12 @@ Route::middleware(['auth', 'verified', 'is_admin_or_kitchen'])->group(function (
     Route::get('/kitchen-orders/canceled', [KitchenOrderController::class, 'canceled'])->name('kitchen.canceled');
     Route::get('/kitchen-orders/delivered', [KitchenOrderController::class, 'delivered'])->name('kitchen.delivered');
     Route::get('/kitchen-orders/completed', [KitchenOrderController::class, 'completed'])->name('kitchen.completed');
+    Route::post('/pedidos/{id}/restaurar', [PedidoController::class, 'restaurarRechazado']);
+    Route::get('/kitchen-orders/rejected', function () {
+        return Inertia::render('kitchen/RejectedOrders');
+    });
+    Route::post('/pedidos/{id}/rechazar', [PedidoController::class, 'rechazarConMotivo']);
+
 });
 
 Route::get('/pedido/{id}/pdf', [PedidoControllerPDF::class, 'generarPDF'])->name('pedido.pdf');

@@ -329,43 +329,43 @@ const pedidoCambioId = ref<number | null>(null);
 
 // --- cargar todos los estados al montar ---
 onMounted(async () => {
-  try {
-    const res = await axios.get('/api/estados-pedido');
-    estadosPedido.value = res.data;
-  } catch (err) {
-    console.error('>> Error fetching /api/estados-pedido:', err);
-  }
+    try {
+        const res = await axios.get('/api/estados-pedido');
+        estadosPedido.value = res.data;
+    } catch (err) {
+        console.error('>> Error fetching /api/estados-pedido:', err);
+    }
 });
 
 // --- abrir modal: inicializa seleccionando por nombre_estado ---
 const abrirCambiarEstado = (id: number) => {
-  pedidoCambioId.value = id;
-  const pedido = orders.value.find(o => o.id_pedido === id);
-  // busco el id_estado que coincide con el nombre actual
-  const match = estadosPedido.value.find(e => e.nombre_estado === pedido?.estadopedido.nombre_estado);
-  estadoSeleccionado.value = match?.id_estado ?? null;
-  showCambiarEstadoModal.value = true;
+    pedidoCambioId.value = id;
+    const pedido = orders.value.find(o => o.id_pedido === id);
+    // busco el id_estado que coincide con el nombre actual
+    const match = estadosPedido.value.find(e => e.nombre_estado === pedido?.estadopedido.nombre_estado);
+    estadoSeleccionado.value = match?.id_estado ?? null;
+    showCambiarEstadoModal.value = true;
 };
 
 // --- cerrar modal ---
 const cerrarCambiarEstado = () => {
-  showCambiarEstadoModal.value = false;
-  pedidoCambioId.value = null;
+    showCambiarEstadoModal.value = false;
+    pedidoCambioId.value = null;
 };
 
 // --- enviar cambio al servidor y refrescar lista ---
 const confirmarCambioEstado = async () => {
-  if (!pedidoCambioId.value || !estadoSeleccionado.value) return;
-  try {
-    const res = await axios.put(`/order/${pedidoCambioId.value}/cambiar-estado`, {
-      estado_id: estadoSeleccionado.value,
-    });
-    
-    await actualizarPedidos();
-    cerrarCambiarEstado();
-  } catch (err: any) {              // ← y aquí
-    console.error('>> Error PUT /order/.../cambiar-estado:', err.response ?? err);
-  }
+    if (!pedidoCambioId.value || !estadoSeleccionado.value) return;
+    try {
+        const res = await axios.put(`/order/${pedidoCambioId.value}/cambiar-estado`, {
+            estado_id: estadoSeleccionado.value,
+        });
+
+        await actualizarPedidos();
+        cerrarCambiarEstado();
+    } catch (err: any) {              // ← y aquí
+        console.error('>> Error PUT /order/.../cambiar-estado:', err.response ?? err);
+    }
 };
 
 
@@ -579,8 +579,11 @@ const confirmarCambioEstado = async () => {
                             <div>
                                 <p class="font-medium">{{ item.producto.nombre }}</p>
                                 <p class="text-xs text-gray-500">Cantidad: {{ item.cantidad }}</p>
-                                <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">
-                                    "{{ item.comentario }}"</p>
+                                <p v-if="item.comentario" class="text-xs italic mt-1"
+                                    :class="item.comentario.includes('Motivo rechazo:') ? 'text-red-600 font-semibold' : 'text-gray-700 dark:text-gray-300'">
+                                    "{{ item.comentario }}"
+                                </p>
+
                             </div>
                             <p class="font-semibold">{{ (item.producto.precio * item.cantidad).toFixed(2) }} Bs</p>
                         </div>

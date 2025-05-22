@@ -122,7 +122,5 @@ onUnmounted(() => {
 });
 </script>
 
-
 <template>
-    <!-- Este componente no tiene UI visible -->
 </template>

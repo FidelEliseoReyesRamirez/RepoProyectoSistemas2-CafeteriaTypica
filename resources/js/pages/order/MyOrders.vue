@@ -387,8 +387,11 @@ const validarFechas = () => {
                             <div>
                                 <p class="font-medium">{{ item.producto.nombre }}</p>
                                 <p class="text-xs text-gray-500">Cantidad: {{ item.cantidad }}</p>
-                                <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">
-                                    "{{ item.comentario }}"</p>
+                                <p v-if="item.comentario" class="text-xs italic mt-1"
+                                    :class="item.comentario.includes('Motivo rechazo:') ? 'text-red-600 font-semibold' : 'text-gray-700 dark:text-gray-300'">
+                                    "{{ item.comentario }}"
+                                </p>
+
                             </div>
                             <p class="font-semibold">{{ (item.producto.precio * item.cantidad).toFixed(2) }} Bs</p>
                         </div>

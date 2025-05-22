@@ -17,48 +17,49 @@ class KitchenController extends Controller
     }
 
     public function index()
-{
-    $activos = Pedido::with(['detallepedidos.producto', 'estadopedido'])
-        ->whereHas('estadopedido', function ($q) {
-            $q->whereIn('nombre_estado', ['Pendiente', 'Modificado', 'En preparación', 'Listo para servir', 'Entregado']);
-        })
-        ->orderBy('fecha_hora_registro')
-        ->get()
-        ->map(function ($pedido) {
-            $arr = $pedido->toArray();
-            if ($pedido->estadopedido->nombre_estado === 'Modificado') {
-                $audit = Auditorium::where('accion', 'Editar pedido')
-                    ->where('descripcion', 'like', "%pedido #{$pedido->id_pedido}%")
-                    ->latest('fecha_hora')
-                    ->first();
-                if ($audit && preg_match('/con: (.*) \(Total:/', $audit->descripcion, $m)) {
-                    $arr['nuevos_detalles'] = array_map('trim', explode(',', $m[1]));
+    {
+        $activos = Pedido::with(['detallepedidos.producto', 'estadopedido'])
+            ->whereHas('estadopedido', function ($q) {
+                $q->whereIn('nombre_estado', ['Pendiente', 'Modificado', 'En preparación', 'Listo para servir', 'Entregado', 'Rechazado']);
+            })
+
+            ->orderBy('fecha_hora_registro')
+            ->get()
+            ->map(function ($pedido) {
+                $arr = $pedido->toArray();
+                if ($pedido->estadopedido->nombre_estado === 'Modificado') {
+                    $audit = Auditorium::where('accion', 'Editar pedido')
+                        ->where('descripcion', 'like', "%pedido #{$pedido->id_pedido}%")
+                        ->latest('fecha_hora')
+                        ->first();
+                    if ($audit && preg_match('/con: (.*) \(Total:/', $audit->descripcion, $m)) {
+                        $arr['nuevos_detalles'] = array_map('trim', explode(',', $m[1]));
+                    } else {
+                        $arr['nuevos_detalles'] = [];
+                    }
                 } else {
                     $arr['nuevos_detalles'] = [];
                 }
-            } else {
+                return $arr;
+            });
+
+        $cancelados = Pedido::with(['detallepedidos.producto', 'estadopedido'])
+            ->whereHas('estadopedido', function ($q) {
+                $q->where('nombre_estado', 'Cancelado');
+            })
+            ->orderByDesc('fecha_hora_registro')
+            ->get()
+            ->map(function ($pedido) {
+                $arr = $pedido->toArray();
                 $arr['nuevos_detalles'] = [];
-            }
-            return $arr;
-        });
+                return $arr;
+            });
 
-    $cancelados = Pedido::with(['detallepedidos.producto', 'estadopedido'])
-        ->whereHas('estadopedido', function ($q) {
-            $q->where('nombre_estado', 'Cancelado');
-        })
-        ->orderByDesc('fecha_hora_registro')
-        ->get()
-        ->map(function ($pedido) {
-            $arr = $pedido->toArray();
-            $arr['nuevos_detalles'] = [];
-            return $arr;
-        });
-
-    return response()->json([
-        'activos'    => $activos,
-        'cancelados' => $cancelados,
-    ]);
-}
+        return response()->json([
+            'activos'    => $activos,
+            'cancelados' => $cancelados,
+        ]);
+    }
 
 
 

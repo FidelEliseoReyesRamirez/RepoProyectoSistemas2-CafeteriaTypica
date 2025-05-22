@@ -36,7 +36,7 @@ const cerrarResumen = () => {
 
 onMounted(cargarPedidos);
 
-const pedido = ref<any | null>(null); 
+const pedido = ref<any | null>(null);
 
 const generarPDF = async (pedidoId: number) => {
   try {
@@ -55,6 +55,39 @@ const generarPDF = async (pedidoId: number) => {
 
   } catch (error) {
     console.error('Error generando PDF:', error);
+  }
+};
+
+const mostrarModalRechazo = ref(false);
+const comentarioRechazo = ref('');
+const pedidoRechazoId = ref<number | null>(null);
+const confirmarRechazo = (id: number) => {
+  pedidoRechazoId.value = id;
+  comentarioRechazo.value = '';
+  mostrarModalRechazo.value = true;
+}; import { AxiosError } from 'axios';
+
+const rechazarPedido = async () => {
+  if (pedidoRechazoId.value !== null) {
+    try {
+      await axios.post(`/pedidos/${pedidoRechazoId.value}/rechazar`,
+        { comentario: comentarioRechazo.value },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        }
+      );
+      console.log('Pedido rechazado correctamente');
+      mostrarModalRechazo.value = false;
+      cargarPedidos();
+    } catch (error) {
+      const err = error as AxiosError;
+      console.error('Error al rechazar el pedido:', err.response?.data ?? err.message);
+      alert(JSON.stringify(err.response?.data ?? err.message));
+    }
+
   }
 };
 
@@ -81,6 +114,11 @@ const generarPDF = async (pedidoId: number) => {
           style="background-color: #0000FF">
           Pedidos Entregados
         </button>
+        <button @click="router.visit('/kitchen-orders/rejected')" class="px-3 py-1 text-sm text-white rounded shadow"
+          style="background-color: #6a6362">
+          Pedidos Rechazados
+        </button>
+
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -149,11 +187,17 @@ const generarPDF = async (pedidoId: number) => {
               class="text-xs bg-[#FFB300] hover:bg-[#FFB300] text-white rounded px-2 py-1">
               Pendiente
             </button>
+            <button v-if="pedido.estadopedido.nombre_estado !== 'Rechazado'" @click="confirmarRechazo(pedido.id_pedido)"
+              class="text-xs bg-red-700 hover:bg-red-800 text-white rounded px-2 py-1">
+              Rechazar
+            </button>
+
             <button @click="abrirResumen(pedido)"
               class="text-xs bg-gray-600 hover:bg-gray-700 text-white rounded px-2 py-1">
               Detalles
             </button>
-            <button @click="generarPDF(pedido.id_pedido)"   class="text-xs bg-[#800080] hover:bg-[#9b4dff]  text-white rounded px-2 py-1">
+            <button @click="generarPDF(pedido.id_pedido)"
+              class="text-xs bg-[#800080] hover:bg-[#9b4dff]  text-white rounded px-2 py-1">
               Imprimir
             </button>
           </div>
@@ -190,6 +234,19 @@ const generarPDF = async (pedidoId: number) => {
       </div>
     </div>
   </AppLayout>
+  <div v-if="mostrarModalRechazo" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg w-full max-w-md">
+      <h2 class="text-lg font-bold mb-2">Rechazar pedido</h2>
+      <p class="text-sm mb-2">Este pedido será rechazado. El mesero será notificado.</p>
+      <textarea v-model="comentarioRechazo" class="w-full border p-2 rounded text-sm" rows="3"
+        placeholder="Motivo del rechazo (opcional)"></textarea>
+      <div class="mt-4 flex justify-end gap-2">
+        <button @click="mostrarModalRechazo = false" class="px-3 py-1 rounded border">Cancelar</button>
+        <button @click="rechazarPedido" class="px-3 py-1 bg-red-700 text-white rounded">Rechazar</button>
+      </div>
+    </div>
+  </div>
+
 </template>
 
 <style scoped>

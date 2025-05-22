@@ -661,4 +661,70 @@ class PedidoController extends Controller
         $estados = Estadopedido::select('id_estado', 'nombre_estado', 'color_codigo')->get();
         return response()->json($estados);
     }
+    public function restaurarRechazado($id)
+    {
+        $pedido = Pedido::with('estadopedido')->findOrFail($id);
+
+        if ($pedido->estadopedido->nombre_estado !== 'Rechazado') {
+            return back()->with('error', 'Solo se pueden restaurar pedidos rechazados.');
+        }
+
+        $estadoPendiente = Estadopedido::where('nombre_estado', 'Pendiente')->firstOrFail();
+
+        $pedido->update(['estado_actual' => $estadoPendiente->id_estado]);
+
+        $admin = Auth::user()?->nombre ?? 'Usuario';
+        $meseroOriginal = $pedido->usuario?->nombre ?? 'Sin asignar';
+
+        $descripcion = "$admin restauró el pedido #{$pedido->id_pedido} desde estado Rechazado a Pendiente";
+        if (Auth::id() !== $pedido->id_usuario_mesero) {
+            $descripcion .= " (Pedido creado originalmente por: $meseroOriginal)";
+        }
+
+        Auditorium::create([
+            'id_usuario' => Auth::id(),
+            'accion' => 'Restaurar rechazado',
+            'descripcion' => $descripcion,
+            'fecha_hora' => now(),
+            'eliminado' => 0,
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+    public function rechazarConMotivo(Request $request, $id)
+    {
+        Log::info("Intentando rechazar pedido ID: $id");
+        $pedido = Pedido::with(['detallepedidos' => function ($q) {
+            $q->orderBy('id_detalle');
+        }])->findOrFail($id);
+
+        if ($pedido->estadopedido->nombre_estado === 'Rechazado') {
+            return response()->json(['error' => 'Ya está rechazado'], 422);
+        }
+
+        $estadoRechazado = Estadopedido::where('nombre_estado', 'Rechazado')->firstOrFail();
+
+        $motivo = trim($request->input('comentario', ''));
+
+        DB::transaction(function () use ($pedido, $estadoRechazado, $motivo) {
+            $pedido->estado_actual = $estadoRechazado->id_estado;
+            $pedido->save();
+            Log::info("Pedido {$pedido->id_pedido} marcado como Rechazado");
+
+            $pedido->load('detallepedidos');
+            $primerDetalle = $pedido->detallepedidos->first();
+            if ($primerDetalle && $motivo !== '') {
+                $comentarioOriginal = $primerDetalle->comentario ?? '';
+                $primerDetalle->comentario = $comentarioOriginal . "\nMotivo rechazo: " . $motivo;
+                $primerDetalle->save();
+            }
+
+            $usuario = Auth::user()->nombre ?? 'Usuario';
+            $descripcion = "$usuario rechazó el pedido #{$pedido->id_pedido}" .
+                ($motivo ? " con motivo: $motivo" : '');
+            $this->registrarAuditoria('Rechazar pedido', $descripcion);
+        });
+
+        return response()->json(['success' => true]);
+    }
 }
