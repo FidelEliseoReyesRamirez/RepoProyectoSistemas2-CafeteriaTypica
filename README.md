@@ -16,3 +16,6 @@ https://docs.google.com/spreadsheets/d/1rd4Tuu83f91QJEbQEdcmHuEpaTImqXN2BdFH2q9d
 php artisan migrate
 
 php artisan db:seed
+
+(borra y crea todas las tablas, etc y pone datos)
+php artisan migrate:fresh --seed
