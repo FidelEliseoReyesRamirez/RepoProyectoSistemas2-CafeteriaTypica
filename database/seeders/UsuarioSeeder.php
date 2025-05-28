@@ -12,8 +12,8 @@ class UsuarioSeeder extends Seeder
         $usuarios = [
             [
                 'nombre' => 'Fidel Reyes',
-                'email' => 'fidelrey000@gmail.com',
-                'contrasena_hash' => '$2y$12$YQslkQddUVt6CwoYux7QTuuRRqwAK.hcKDVklJ5YKt1/trDYCwAo2',
+                'email' => 'fideleliseoreyesramirez@gmail.com',
+                'contrasena_hash' => '$2y$12$AQCAiQsvQwimxi007N8IxOSO1giTU.xGGlHGg8gPWdP35uQ3hdtoW',
                 'estado' => 'Activo',
                 'id_rol' => 1,
                 'bloqueado' => 0,
@@ -23,9 +23,9 @@ class UsuarioSeeder extends Seeder
                 'intentos_fallidos' => 0,
             ],
             [
-                'nombre' => 'Luis Gómez',
-                'email' => 'luis@gmail.com',
-                'contrasena_hash' => '$2y$12$LJiHcdMq6YZRve07MijYhegVzmHQ4lVzGJdbAWUNiuCrQs6zcQuti',
+                'nombre' => 'Adriano Pérez',
+                'email' => 'adriano@gmail.com',
+                'contrasena_hash' => '$2y$12$gtttknBOFhc/unYGAVUVm.Kp2Gp4SGigHxFtTp06q6zfT8.CqD0i.',
                 'estado' => 'Activo',
                 'id_rol' => 3,
                 'bloqueado' => 0,
@@ -35,35 +35,11 @@ class UsuarioSeeder extends Seeder
                 'intentos_fallidos' => 0,
             ],
             [
-                'nombre' => 'Mario Rojas',
-                'email' => 'mario.cocina@gmail.com',
-                'contrasena_hash' => 'hash789',
-                'estado' => 'Activo',
-                'id_rol' => 3,
-                'bloqueado' => 0,
-                'bloqueado_hasta' => null,
-                'bloqueos_hoy' => 0,
-                'eliminado' => 0,
-                'intentos_fallidos' => 0,
-            ],
-            [
-                'nombre' => 'Carmen Díaz',
-                'email' => 'carmen.caja@gmail.com',
-                'contrasena_hash' => 'hashabc',
+                'nombre' => 'Horacio Díaz',
+                'email' => 'horacio@gmail.com',
+                'contrasena_hash' => '$2y$12$gtttknBOFhc/unYGAVUVm.Kp2Gp4SGigHxFtTp06q6zfT8.CqD0i.',
                 'estado' => 'Activo',
                 'id_rol' => 4,
-                'bloqueado' => 0,
-                'bloqueado_hasta' => null,
-                'bloqueos_hoy' => 0,
-                'eliminado' => 0,
-                'intentos_fallidos' => 0,
-            ],
-            [
-                'nombre' => 'Andres López',
-                'email' => 'andres.mesero@gmail.com',
-                'contrasena_hash' => 'hashdef',
-                'estado' => 'Activo',
-                'id_rol' => 2,
                 'bloqueado' => 0,
                 'bloqueado_hasta' => null,
                 'bloqueos_hoy' => 0,
@@ -75,7 +51,7 @@ class UsuarioSeeder extends Seeder
         foreach ($usuarios as $usuario) {
             Usuario::updateOrCreate(
                 ['email' => $usuario['email']], 
-                $usuario                        
+                $usuario
             );
         }
     }
