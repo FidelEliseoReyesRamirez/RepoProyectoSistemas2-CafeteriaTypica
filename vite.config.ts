@@ -8,11 +8,11 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
     server: {
-        host: '192.168.0.184',
+        host: '192.168.43.222',
         port: 5173,
         strictPort: true,
         cors: {
-            origin: 'http://192.168.0.184:8000',
+            origin: 'http://192.168.43.222:8000',
             credentials: true,
         },
     },
