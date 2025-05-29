@@ -85,10 +85,11 @@ const actualizarPedidos = async () => {
             ) {
                 if (estadoKey === 'pendiente' && user?.id_rol === 2) {
                     reproducirAudio('pendiente');
-                } else if (estadoKey !== 'pendiente') {
+                } else if (estadoKey !== 'pendiente' && (estadoKey !== 'rechazado' || user?.id_rol === 2)) {
                     reproducirAudio(estadoKey);
                 }
             }
+
 
             if (estadoKey === 'pendiente') {
                 tiempoPendiente.value[id] = (tiempoPendiente.value[id] || 0) + INTERVALO_MS;

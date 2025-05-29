@@ -101,13 +101,14 @@ const reproducirAudio = (estado: string) => {
     source.start(0);
   }
 };
-
 const cargarPedidos = async () => {
   const { data } = await axios.get('/api/kitchen-orders');
+
   pedidosActivos.value = data.activos.filter((p: any) =>
     ['Pendiente', 'Modificado', 'Listo para servir', 'En preparación']
       .includes(p.estadopedido.nombre_estado)
   );
+
   pedidosCancelados.value = data.cancelados;
 
   const todosLosPedidos = [
@@ -125,7 +126,8 @@ const cargarPedidos = async () => {
     const anterior = previousStates.value[id];
     const estadoKey = normalizarEstado(actual);
     const cambiadoPorId = pedido.actualizado_por_id;
-    const ultimo = ultimoAudioReproducido.value[id];
+
+    const yaSono = ultimoAudioReproducido.value[id] === estadoKey;
 
     if (
       (!anterior || anterior !== actual) &&
@@ -133,10 +135,9 @@ const cargarPedidos = async () => {
       cambiadoPorId !== user?.id_usuario &&
       (
         ![1, 3].includes(user?.id_rol ?? 0) ||
-        estadoKey === 'pendiente' ||
-        estadoKey === 'modificado'
+        ['pendiente', 'modificado', 'cancelado', 'rechazado'].includes(estadoKey)
       ) &&
-      estadoKey !== ultimo
+      !yaSono
     ) {
       reproducirAudio(estadoKey);
       ultimoAudioReproducido.value[id] = estadoKey;
@@ -152,14 +153,12 @@ const cargarPedidos = async () => {
       delete tiempoPendiente.value[id];
     }
 
-    previousStates.value[id] = actual;
-
-    
     if (anterior && anterior !== actual) {
       delete ultimoAudioReproducido.value[id];
     }
-  }
 
+    previousStates.value[id] = actual;
+  }
 
   primeraCarga = false;
 };
@@ -410,7 +409,7 @@ onMounted(() => {
     <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg w-full max-w-md">
       <h2 class="text-lg font-bold mb-2">Rechazar pedido</h2>
       <p class="text-sm mb-2">Este pedido será rechazado. El mesero será notificado.</p>
-      <textarea v-model="comentarioRechazo" class="w-full border p-2 rounded text-sm" rows="3"
+      <textarea v-model="comentarioRechazo" class="w-full border p-2 rounded text-sm text-black" rows="3" 
         placeholder="Motivo del rechazo (opcional)"></textarea>
       <div class="mt-4 flex justify-end gap-2">
         <button @click="mostrarModalRechazo = false" class="px-3 py-1 rounded border">Cancelar</button>
