@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Controllers\PedidoController;
 
+
 // Ruta para Dashboard, solo accesible para admin
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -36,6 +37,7 @@ Route::get('/rol/{id}', function ($id) {
 
 //USUARIOS
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\AuditoriaController;
 
 Route::middleware(['auth', 'verified', 'is_admin'])->group(function () {
     Route::get('/users', [UsuarioController::class, 'index'])->name('users.index');
@@ -51,6 +53,12 @@ Route::middleware(['auth', 'verified', 'is_admin'])->group(function () {
     Route::get('/all-orders', [PedidoController::class, 'allOrders'])->name('orders.all');
     Route::get('/api/all-orders', [PedidoController::class, 'allOrdersJson']);
     Route::get('/api/estados-pedido', [PedidoController::class, 'getEstadosPedido']);
+    //RUTAS DE HORACIO HACIA ABAJO
+    Route::get('/audit', [AuditoriaController::class, 'index'])->name('audit.index');
+
+
+
+    //NO elimines nada
 });
 
 //PRODUCTOS
