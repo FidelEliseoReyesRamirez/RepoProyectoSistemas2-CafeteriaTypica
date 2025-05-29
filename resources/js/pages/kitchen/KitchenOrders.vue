@@ -121,46 +121,44 @@ const cargarPedidos = async () => {
   ];
 
   for (const pedido of todosLosPedidos) {
-    const id = pedido.id_pedido;
-    const actual = pedido.estadopedido.nombre_estado;
-    const anterior = previousStates.value[id];
-    const estadoKey = normalizarEstado(actual);
-    const cambiadoPorId = pedido.actualizado_por_id;
+  const id = pedido.id_pedido;
+  const actual = pedido.estadopedido.nombre_estado;
+  const anterior = previousStates.value[id];
+  const estadoKey = normalizarEstado(actual);
+  const cambiadoPorId = pedido.actualizado_por_id;
 
-    const yaSono = ultimoAudioReproducido.value[id] === estadoKey;
+  const ultimoEstadoSonado = ultimoAudioReproducido.value[id];
 
-    if (
-      (!anterior || anterior !== actual) &&
-      !primeraCarga &&
-      cambiadoPorId !== user?.id_usuario &&
-      (
-        ![1, 3].includes(user?.id_rol ?? 0) ||
-        ['pendiente', 'modificado', 'cancelado', 'rechazado'].includes(estadoKey)
-      ) &&
-      !yaSono
-    ) {
-      reproducirAudio(estadoKey);
-      ultimoAudioReproducido.value[id] = estadoKey;
-    }
+  const debeSonar =
+    (!anterior || anterior !== actual) &&
+    !primeraCarga &&
+    cambiadoPorId !== user?.id_usuario &&
+    (
+      ![1, 3].includes(user?.id_rol ?? 0) ||
+      ['pendiente', 'modificado', 'cancelado', 'rechazado'].includes(estadoKey)
+    ) &&
+    (ultimoEstadoSonado !== estadoKey);
 
-    if (estadoKey === 'pendiente') {
-      tiempoPendiente.value[id] = (tiempoPendiente.value[id] || 0) + INTERVALO_MS;
-      if (tiempoPendiente.value[id] >= LIMITE_MS) {
-        reproducirAudio('recordatorio');
-        tiempoPendiente.value[id] = 0;
-      }
-    } else {
-      delete tiempoPendiente.value[id];
-    }
-
-    if (anterior && anterior !== actual) {
-      delete ultimoAudioReproducido.value[id];
-    }
-
-    previousStates.value[id] = actual;
+  if (debeSonar) {
+    reproducirAudio(estadoKey);
+    ultimoAudioReproducido.value[id] = estadoKey;
   }
 
-  primeraCarga = false;
+  if (estadoKey === 'pendiente') {
+    tiempoPendiente.value[id] = (tiempoPendiente.value[id] || 0) + INTERVALO_MS;
+    if (tiempoPendiente.value[id] >= LIMITE_MS) {
+      reproducirAudio('recordatorio');
+      tiempoPendiente.value[id] = 0;
+    }
+  } else {
+    delete tiempoPendiente.value[id];
+  }
+
+  previousStates.value[id] = actual;
+}
+
+primeraCarga = false;
+
 };
 
 const cambiarEstado = async (id: number, nuevoEstado: string) => {

@@ -182,15 +182,16 @@ const cerrarResumen = () => {
                     <label class="block mb-1 text-sm font-semibold">Fecha de inicio:</label>
                     <Datepicker :model-value="fechaInicio ?? undefined"
                         @update:model-value="fechaInicio = $event ?? undefined" placeholder="Selecciona fecha de inicio"
-                        :input-class="'w-full border border-black border-[0.5px] px-3 py-2 rounded text-black dark:text-black bg-white dark:bg-white'"
+:input-class="'w-full border px-3 py-2 rounded text-black placeholder:text-gray-500 bg-white dark:bg-[#1e1e1e] dark:text-white'"
                         :format="'yyyy-MM-dd'" :available-dates="{ dates: fechasDisponibles }" />
+
                 </div>
 
                 <div>
                     <label class="block mb-1 text-sm font-semibold">Fecha de fin (opcional):</label>
                     <Datepicker :model-value="fechaFin ?? undefined"
                         @update:model-value="fechaFin = $event ?? undefined" placeholder="Selecciona fecha de fin"
-                        :input-class="'w-full border border-black border-[0.5px] px-3 py-2 rounded text-black dark:text-black bg-white dark:bg-white'"
+                        :input-class="'w-full border border-black px-3 py-2 rounded bg-white text-black placeholder:text-gray-500'"
                         :format="'yyyy-MM-dd'" :available-dates="{ dates: fechasDisponibles }"
                         :disabled-dates="{ predicate: (d: Date) => !!fechaInicio && d < fechaInicio }" />
                 </div>

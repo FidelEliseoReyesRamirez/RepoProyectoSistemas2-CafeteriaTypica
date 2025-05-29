@@ -170,7 +170,9 @@ const buscarStock = (id_producto: number) => {
 };
 
 
-const validarCantidad = (item: { id_producto: number; cantidad: number; }) => {
+const validarCantidad = (item: { id_producto: number; cantidad: number | null | undefined }) => {
+    if (item.cantidad == null || item.cantidad === '') return;
+
     const stock = buscarStock(item.id_producto);
 
     if (item.cantidad > stock) {
@@ -181,6 +183,7 @@ const validarCantidad = (item: { id_producto: number; cantidad: number; }) => {
         abrirModalError('La cantidad mínima es 1.');
     }
 };
+
 
 // Agrupar productos aplicando filtros
 const productosAgrupados = computed(() => {
@@ -334,10 +337,11 @@ onMounted(() => {
                     <div class="space-y-4">
                         <div v-for="item in carrito" :key="item.id_producto" class="flex flex-col border-b pb-3">
                             <p class="font-semibold">{{ item.nombre }}</p>
-                            <input v-model.number="item.cantidad" type="number" @input="validarCantidad(item)" min="1"
-                                :max="buscarStock(item.id_producto)"
+                            <input v-model.number="item.cantidad" type="number" min="1"
+                                :max="buscarStock(item.id_producto)" @blur="validarCantidad(item)"
                                 class="mt-1 w-20 border px-2 py-1 rounded text-sm bg-white dark:bg-[#1d1b16] border-[#c5a880] dark:border-[#8c5c3b]"
                                 onkeypress="if (event.key.match(/[^0-9]/)) event.preventDefault();" />
+
                             <textarea v-model="item.comentario" placeholder="Comentario opcional"
                                 class="mt-2 w-full border px-2 py-1 rounded text-sm bg-white dark:bg-[#1d1b16]"
                                 :class="[item.comentario.length > 255 ? 'border-red-500 dark:border-red-400' : 'border-[#c5a880] dark:border-[#8c5c3b]']" />
@@ -446,7 +450,7 @@ onMounted(() => {
         <div v-if="showErrorModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
             <div class="bg-white dark:bg-[#2c211b] rounded-lg shadow-xl p-6 max-w-md w-full">
                 <h2 class="text-lg font-bold text-red-600 mb-2">Error</h2>
-                <p class="text-sm mb-4">Ocurrió un error inesperado. Intente nuevamente.</p>
+                <p class="text-sm mb-4">Ocurrió un error inesperado. Intente nuevamente. La cantidad mínima de un producto es: 1</p>
                 <div class="flex justify-end">
                     <button @click="recargarPagina" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
                         Recargar
