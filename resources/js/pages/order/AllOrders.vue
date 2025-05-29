@@ -239,22 +239,20 @@ const isFechaFinalInvalid = ref(false);
 
 const validarFechas = () => {
     if (fechaInicio.value && fechaFin.value) {
-        const fechaIni = new Date(fechaInicio.value).getTime();
-        const fechaFinVal = new Date(fechaFin.value).getTime();
-        if (fechaIni > fechaFinVal) {
-            isFechaFinalInvalid.value = true;
-        } else {
-            isFechaFinalInvalid.value = false;
-        }
+        isFechaFinalInvalid.value = new Date(fechaFin.value) < new Date(fechaInicio.value);
+    } else {
+        isFechaFinalInvalid.value = false;
     }
 };
+
 
 const columnasSeleccionadas = ref<string[]>([]);
 
 // Definir la función formatDate para formatear la fecha a 'yyyy-MM-dd'
-const formatDate = (date?: Date): string | null => {
-    return date ? date.toISOString().split('T')[0] : null;
+const formatDate = (date: Date): string => {
+    return date.toISOString().split('T')[0];
 };
+
 
 const exportarExcel = () => {
     // Abre el modal cuando se hace clic en el botón de exportar
@@ -401,11 +399,15 @@ const confirmarCambioEstado = async () => {
                     <option value="rango_fechas">Rango de fechas</option>
                 </select>
 
-                <div v-if="filtroTiempo === 'rango_fechas'" class="flex gap-4 mt-4">
-                    <input type="date" v-model="fechaInicio" @change="validarFechas"
+                <div v-if="filtroTiempo === 'rango_fechas'" class="flex gap-4 items-center">
+
+                    <input type="date" v-model="fechaInicio"
                         class="border text-black rounded px-3 py-2 text-sm w-full md:w-48" />
-                    <input type="date" v-model="fechaFin" :disabled="isFechaFinalInvalid" @change="validarFechas"
+
+                    <input type="date" v-model="fechaFin" :min="fechaInicio || undefined"
                         class="border text-black rounded px-3 py-2 text-sm w-full md:w-48" />
+
+
                     <div v-if="isFechaFinalInvalid" class="text-red-500 text-sm mt-2">
                         La fecha final no puede ser anterior a la fecha de inicio.
                     </div>
@@ -416,10 +418,11 @@ const confirmarCambioEstado = async () => {
                     <option v-for="mesero in meserosDisponibles" :key="mesero" :value="mesero">{{ mesero }}</option>
                 </select>
 
-                <button @click="exportarExcel"
-                    class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded shadow">
+                <button @click="exportarExcel" :disabled="isFechaFinalInvalid"
+                    class="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded shadow disabled:opacity-50 disabled:cursor-not-allowed">
                     Exportar a Excel
                 </button>
+
                 <button @click="() => { filtroNumero = ''; filtroEstado = ''; filtroTiempo = ''; filtroMesero = '' }"
                     class="text-sm bg-red-500 hover:bg-red-600 text-white rounded px-3 py-2">
                     Limpiar filtros

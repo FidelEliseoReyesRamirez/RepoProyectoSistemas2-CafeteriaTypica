@@ -1,14 +1,99 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
-import axios from 'axios';
-import { router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
+import { onMounted, ref, computed } from 'vue';
+import axios, { AxiosError } from 'axios';
 
+// Filtros
+const filtroNumero = ref('');
+const filtroEstado = ref('');
+const filtroTiempo = ref('');
+const fechaInicio = ref<string | null>(null);
+const fechaFin = ref<string | null>(null);
+const isFechaFinalInvalid = ref(false);
+
+const validarFechas = () => {
+  if (fechaInicio.value && fechaFin.value) {
+    isFechaFinalInvalid.value = new Date(fechaFin.value) < new Date(fechaInicio.value);
+  } else {
+    isFechaFinalInvalid.value = false;
+  }
+};
+
+const filtrarPorTiempo = (fecha: string) => {
+  const ahora = new Date();
+  const fechaPedido = new Date(fecha);
+  switch (filtroTiempo.value) {
+    case 'ultima_hora': return ahora.getTime() - fechaPedido.getTime() <= 3600000;
+    case 'ultimas_2': return ahora.getTime() - fechaPedido.getTime() <= 7200000;
+    case 'hoy': return fechaPedido.toDateString() === ahora.toDateString();
+    case 'ultimas_24': return ahora.getTime() - fechaPedido.getTime() <= 86400000;
+    case 'ultimos_2_dias': return ahora.getTime() - fechaPedido.getTime() <= 2 * 86400000;
+    case 'ultima_semana': return ahora.getTime() - fechaPedido.getTime() <= 7 * 86400000;
+    case 'este_mes': return fechaPedido.getMonth() === ahora.getMonth() && fechaPedido.getFullYear() === ahora.getFullYear();
+    case 'rango_fechas':
+      if (!fechaInicio.value || !fechaFin.value || isFechaFinalInvalid.value) return true;
+      const ini = new Date(fechaInicio.value).getTime();
+      const fin = new Date(fechaFin.value).getTime();
+      return fechaPedido.getTime() >= ini && fechaPedido.getTime() <= fin;
+    default: return true;
+  }
+};
+
+// Pedidos
 const pedidosActivos = ref<any[]>([]);
 const pedidosCancelados = ref<any[]>([]);
 const pedidoResumen = ref<any | null>(null);
 const mostrarResumen = ref(false);
+
+// Audio reactivo
+const previousStates = ref<Record<number, string>>({});
+const audioContext = new AudioContext();
+const audioBuffers = new Map<string, AudioBuffer>();
+const tiempoPendiente = ref<Record<number, number>>({});
+const INTERVALO_MS = 3000;
+const LIMITE_MS = 5 * 60 * 1000;
+let primeraCarga = true;
+
+const normalizarEstado = (estado: string) => {
+  const mapa: Record<string, string> = { 'listo para servir': 'listo' };
+  const estadoNormal = estado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').trim();
+  return mapa[estadoNormal] ?? estadoNormal.replace(/\s+/g, '_');
+};
+
+const unlockAudioContext = () => {
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
+  }
+};
+
+const cargarAudios = async () => {
+  const estados = [
+    'pendiente', 'en_preparacion', 'listo', 'entregado',
+    'cancelado', 'pagado', 'modificado', 'rechazado', 'recordatorio',
+  ];
+
+  for (const estado of estados) {
+    try {
+      const response = await fetch(`/sounds/${estado}.mp3`);
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = await audioContext.decodeAudioData(arrayBuffer);
+      audioBuffers.set(estado, buffer);
+    } catch {
+      console.warn(`No se pudo cargar el audio: ${estado}`);
+    }
+  }
+};
+
+const reproducirAudio = (estado: string) => {
+  const buffer = audioBuffers.get(estado);
+  if (buffer) {
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+  }
+};
 
 const cargarPedidos = async () => {
   const { data } = await axios.get('/api/kitchen-orders');
@@ -17,6 +102,40 @@ const cargarPedidos = async () => {
       .includes(p.estadopedido.nombre_estado)
   );
   pedidosCancelados.value = data.cancelados;
+
+  const todosLosPedidos = [
+    ...data.activos,
+    ...data.cancelados,
+    ...(data.entregados ?? []),
+    ...(data.rechazados ?? []),
+    ...(data.pagados ?? []),
+    ...(data.modificados ?? []),
+  ];
+
+  for (const pedido of todosLosPedidos) {
+    const id = pedido.id_pedido;
+    const actual = pedido.estadopedido.nombre_estado;
+    const anterior = previousStates.value[id];
+    const estadoKey = normalizarEstado(actual);
+
+    if ((!anterior || anterior !== actual) && !primeraCarga) {
+      reproducirAudio(estadoKey);
+    }
+
+    if (estadoKey === 'pendiente') {
+      tiempoPendiente.value[id] = (tiempoPendiente.value[id] || 0) + INTERVALO_MS;
+      if (tiempoPendiente.value[id] >= LIMITE_MS) {
+        reproducirAudio('recordatorio');
+        tiempoPendiente.value[id] = 0;
+      }
+    } else {
+      delete tiempoPendiente.value[id];
+    }
+
+    previousStates.value[id] = actual;
+  }
+
+  primeraCarga = false;
 };
 
 const cambiarEstado = async (id: number, nuevoEstado: string) => {
@@ -34,25 +153,12 @@ const cerrarResumen = () => {
   mostrarResumen.value = false;
 };
 
-onMounted(cargarPedidos);
-
-const pedido = ref<any | null>(null);
-
 const generarPDF = async (pedidoId: number) => {
   try {
     const response = await axios.get(`/pedido/${pedidoId}/pdf`, { responseType: 'blob' });
-
-    // Crear un objeto URL a partir del blob recibido
     const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-
-    // Abrir el PDF en una nueva pestaña
     const pdfWindow = window.open(url, '_blank');
-
-    // Esperar a que el PDF se cargue y luego activar la impresión automática
-    pdfWindow?.addEventListener('load', () => {
-      pdfWindow?.print();
-    });
-
+    pdfWindow?.addEventListener('load', () => pdfWindow?.print());
   } catch (error) {
     console.error('Error generando PDF:', error);
   }
@@ -61,25 +167,17 @@ const generarPDF = async (pedidoId: number) => {
 const mostrarModalRechazo = ref(false);
 const comentarioRechazo = ref('');
 const pedidoRechazoId = ref<number | null>(null);
+
 const confirmarRechazo = (id: number) => {
   pedidoRechazoId.value = id;
   comentarioRechazo.value = '';
   mostrarModalRechazo.value = true;
-}; import { AxiosError } from 'axios';
+};
 
 const rechazarPedido = async () => {
   if (pedidoRechazoId.value !== null) {
     try {
-      await axios.post(`/pedidos/${pedidoRechazoId.value}/rechazar`,
-        { comentario: comentarioRechazo.value },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-        }
-      );
-      console.log('Pedido rechazado correctamente');
+      await axios.post(`/pedidos/${pedidoRechazoId.value}/rechazar`, { comentario: comentarioRechazo.value });
       mostrarModalRechazo.value = false;
       cargarPedidos();
     } catch (error) {
@@ -87,12 +185,26 @@ const rechazarPedido = async () => {
       console.error('Error al rechazar el pedido:', err.response?.data ?? err.message);
       alert(JSON.stringify(err.response?.data ?? err.message));
     }
-
   }
 };
 
+const pedidosFiltrados = computed(() =>
+  pedidosActivos.value.filter(p =>
+    (!filtroNumero.value || p.id_pedido.toString().includes(filtroNumero.value)) &&
+    (!filtroEstado.value || p.estadopedido.nombre_estado === filtroEstado.value) &&
+    filtrarPorTiempo(p.fecha_hora_registro)
+  )
+);
 
+onMounted(() => {
+  document.addEventListener('click', unlockAudioContext, { once: true });
+  cargarAudios();
+  cargarPedidos();
+  setInterval(cargarPedidos, INTERVALO_MS);
+});
 </script>
+
+
 
 <template>
   <AppLayout>
@@ -101,27 +213,61 @@ const rechazarPedido = async () => {
     <div class="p-4 sm:p-6 w-full max-w-screen-xl mx-auto text-[#4b3621] dark:text-white">
       <h1 class="text-2xl sm:text-3xl font-bold mb-6">Pedidos Cocina</h1>
 
-      <div class="flex gap-2 mb-6">
-        <button @click="router.visit('/kitchen-orders/canceled')" class="px-3 py-1 text-sm text-white rounded shadow"
+      <div class="flex flex-wrap gap-2 mb-6 items-center">
+        <button @click="router.visit('/kitchen-orders/canceled')" class="px-3 py-1.5 text-sm text-white rounded shadow"
           style="background-color: #FF0000">
-          Pedidos Cancelados
+          Ped. Cancelados
         </button>
-        <button @click="router.visit('/kitchen-orders/completed')" class="px-3 py-1 text-sm text-white rounded shadow"
+        <button @click="router.visit('/kitchen-orders/completed')" class="px-3 py-1.5 text-sm text-white rounded shadow"
           style="background-color: #800080">
-          Pedidos Finalizados
+          Ped. Finalizados
         </button>
-        <button @click="router.visit('/kitchen-orders/delivered')" class="px-3 py-1 text-sm text-white rounded shadow"
+        <button @click="router.visit('/kitchen-orders/delivered')" class="px-3 py-1.5 text-sm text-white rounded shadow"
           style="background-color: #0000FF">
-          Pedidos Entregados
+          Ped. Entregados
         </button>
-        <button @click="router.visit('/kitchen-orders/rejected')" class="px-3 py-1 text-sm text-white rounded shadow"
+        <button @click="router.visit('/kitchen-orders/rejected')" class="px-3 py-1.5 text-sm text-white rounded shadow"
           style="background-color: #6a6362">
-          Pedidos Rechazados
+          Ped. Rechazados
         </button>
 
+        <input v-model="filtroNumero" type="text" placeholder="Buscar por #"
+          class="border text-black rounded px-3 py-1.5 text-sm w-44" />
+        <select v-model="filtroEstado" class="border text-black rounded px-3 py-1.5 text-sm w-44">
+          <option value="">Todos los estados</option>
+          <option value="Pendiente">Pendiente</option>
+          <option value="Modificado">Modificado</option>
+          <option value="Listo para servir">Listo para servir</option>
+          <option value="En preparación">En preparación</option>
+        </select>
+        <select v-model="filtroTiempo" class="border text-black rounded px-3 py-1.5 text-sm w-44">
+          <option value="">Todo el tiempo</option>
+          <option value="ultima_hora">Última hora</option>
+          <option value="ultimas_2">Últimas 2 horas</option>
+          <option value="hoy">Hoy</option>
+          <option value="ultimas_24">Últimas 24 horas</option>
+          <option value="ultimos_2_dias">Últimos 2 días</option>
+          <option value="ultima_semana">Última semana</option>
+          <option value="este_mes">Este mes</option>
+          <option value="rango_fechas">Rango de fechas</option>
+        </select>
+
+        <div v-if="filtroTiempo === 'rango_fechas'" class="flex gap-2">
+          <input type="date" v-model="fechaInicio" @change="validarFechas"
+            class="border text-black rounded px-3 py-1.5 text-sm" />
+          <input type="date" v-model="fechaFin" :min="fechaInicio || undefined" @change="validarFechas"
+            class="border text-black rounded px-3 py-1.5 text-sm" />
+        </div>
+
+        <button
+          @click="() => { filtroNumero = ''; filtroEstado = ''; filtroTiempo = ''; fechaInicio = null; fechaFin = null }"
+          class="text-sm bg-red-500 hover:bg-red-600 text-white rounded px-3 py-1.5">
+          Limpiar filtros
+        </button>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
         <!-- Cada pedido es ahora un contenedor independiente que no afecta el tamaño de los demás -->
         <div v-for="(pedido, index) in pedidosActivos" :key="pedido.id_pedido"
           class="pedido-card rounded border relative overflow-visible p-4"
