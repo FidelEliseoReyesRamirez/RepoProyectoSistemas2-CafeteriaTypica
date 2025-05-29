@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -13,10 +12,19 @@ import {
 } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, UserPlus, Coffee, Utensils, Settings, ListChecks, DollarSign, ChefHat } from 'lucide-vue-next';
+import {
+  LayoutGrid,
+  UserPlus,
+  Coffee,
+  Utensils,
+  Settings,
+  ListChecks,
+  DollarSign,
+  ChefHat,
+  NotebookPen // Nuevo ícono agregado
+} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 import type { PageProps } from '@/types';
-
 
 const page = usePage<PageProps>();
 const authUser = page.props.auth.user;
@@ -51,25 +59,32 @@ const mainNavItems: NavItem[] = [
     href: route('order.index'),
     icon: Coffee,
   }] : []),
+
   ...(authUser && authUser.id_rol === 1 ? [{
     title: 'Pedidos',
     href: '/all-orders',
     icon: ListChecks,
   }] : []),
+
   ...(authUser && [1, 4].includes(authUser.id_rol) ? [{
     title: 'Caja',
     href: '/cashier-orders',
     icon: DollarSign,
   }] : []),
+
   ...(authUser && [1, 3].includes(authUser.id_rol) ? [{
     title: 'Cocina',
     href: '/kitchen-orders',
     icon: ChefHat,
   }] : []),
 
-
+  // Nuevo ítem con ícono de blog de notas
+  ...(authUser ? [{
+    title: 'Auditoria',
+    href: '/audit',
+    icon: NotebookPen,
+  }] : []),
 ];
-
 
 // 👉 redirigir el logo al primer ítem permitido
 const firstAvailableHref = mainNavItems.length > 0 ? mainNavItems[0].href : '/';
@@ -82,7 +97,7 @@ const firstAvailableHref = mainNavItems.length > 0 ? mainNavItems[0].href : '/';
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>
             <Link :href="firstAvailableHref">
-            <AppLogo />
+              <AppLogo />
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -97,6 +112,6 @@ const firstAvailableHref = mainNavItems.length > 0 ? mainNavItems[0].href : '/';
       <NavUser />
     </SidebarFooter>
   </Sidebar>
- 
+
   <slot />
 </template>
