@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import type { PageProps } from '@/types';
 import { onMounted, ref, computed } from 'vue';
 import axios, { AxiosError } from 'axios';
+
+const page = usePage<PageProps>();
+const user = page.props.auth?.user;
 
 // Filtros
 const filtroNumero = ref('');
@@ -56,6 +60,7 @@ const LIMITE_MS = 5 * 60 * 1000;
 let primeraCarga = true;
 
 const normalizarEstado = (estado: string) => {
+
   const mapa: Record<string, string> = { 'listo para servir': 'listo' };
   const estadoNormal = estado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').trim();
   return mapa[estadoNormal] ?? estadoNormal.replace(/\s+/g, '_');
@@ -84,10 +89,12 @@ const cargarAudios = async () => {
     }
   }
 };
+const ultimoAudioReproducido = ref<Record<number, string>>({});
 
 const reproducirAudio = (estado: string) => {
   const buffer = audioBuffers.get(estado);
   if (buffer) {
+    console.log(`[${new Date().toISOString()}] SONIDO: ${estado}`);
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContext.destination);
@@ -117,9 +124,22 @@ const cargarPedidos = async () => {
     const actual = pedido.estadopedido.nombre_estado;
     const anterior = previousStates.value[id];
     const estadoKey = normalizarEstado(actual);
+    const cambiadoPorId = pedido.actualizado_por_id;
+    const ultimo = ultimoAudioReproducido.value[id];
 
-    if ((!anterior || anterior !== actual) && !primeraCarga) {
+    if (
+      (!anterior || anterior !== actual) &&
+      !primeraCarga &&
+      cambiadoPorId !== user?.id_usuario &&
+      (
+        ![1, 3].includes(user?.id_rol ?? 0) ||
+        estadoKey === 'pendiente' ||
+        estadoKey === 'modificado'
+      ) &&
+      estadoKey !== ultimo
+    ) {
       reproducirAudio(estadoKey);
+      ultimoAudioReproducido.value[id] = estadoKey;
     }
 
     if (estadoKey === 'pendiente') {
@@ -133,7 +153,13 @@ const cargarPedidos = async () => {
     }
 
     previousStates.value[id] = actual;
+
+    
+    if (anterior && anterior !== actual) {
+      delete ultimoAudioReproducido.value[id];
+    }
   }
+
 
   primeraCarga = false;
 };

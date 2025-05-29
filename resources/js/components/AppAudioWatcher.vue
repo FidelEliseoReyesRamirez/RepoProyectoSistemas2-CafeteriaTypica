@@ -58,6 +58,7 @@ const cargarAudios = async () => {
 const reproducirAudio = (estado: string) => {
     const buffer = audioBuffers.get(estado);
     if (buffer) {
+        console.log(`[${new Date().toISOString()}] SONIDO: ${estado}`);
         const source = audioContext.createBufferSource();
         source.buffer = buffer;
         source.connect(audioContext.destination);
@@ -77,7 +78,11 @@ const actualizarPedidos = async () => {
             const anterior = previousStates.value[id];
             const estadoKey = normalizarEstado(actual);
 
-            if ((!anterior || anterior !== actual) && !primeraCarga) {
+            if (
+                (!anterior || anterior !== actual) &&
+                !primeraCarga &&
+                pedido.actualizado_por_id !== user?.id_usuario
+            ) {
                 if (estadoKey === 'pendiente' && user?.id_rol === 2) {
                     reproducirAudio('pendiente');
                 } else if (estadoKey !== 'pendiente') {
