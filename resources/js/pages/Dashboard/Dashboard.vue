@@ -2,7 +2,7 @@
 import { ref, onMounted, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, usePage } from '@inertiajs/vue3';
-import PlaceholderPattern from '../components/PlaceholderPattern.vue';
+//import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 import type { BreadcrumbItem } from '@/types';
 
 const demandChart = ref(null);
