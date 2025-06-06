@@ -58,6 +58,11 @@ watch(() => page.props.error, (val: unknown) => {
 const filtro = ref('');
 const filtroSoloDisponibles = ref(false);
 const filtroSoloAgotados = ref(false);
+const filtroCategoria = ref('');
+const categoriasDisponibles = computed(() => {
+    const cats = new Set(props.productos.map(p => p.categorium?.nombre ?? 'Sin categoría'));
+    return Array.from(cats);
+});
 
 // Métodos
 const abrirModalError = (mensaje: string) => {
@@ -203,8 +208,9 @@ const productosAgrupados = computed(() => {
 
         const coincideDisponible = !filtroSoloDisponibles.value || (p.disponibilidad && p.cantidad_disponible > 0);
         const coincideAgotado = !filtroSoloAgotados.value || (!p.disponibilidad || p.cantidad_disponible <= 0);
+        const coincideCategoria = !filtroCategoria.value || (p.categorium?.nombre ?? 'Sin categoría') === filtroCategoria.value;
 
-        if (coincideBusqueda && coincideDisponible && coincideAgotado) {
+        if (coincideBusqueda && coincideDisponible && coincideAgotado && coincideCategoria) {
             const cat = p.categorium?.nombre ?? 'Sin categoría';
             if (!grupos[cat]) grupos[cat] = [];
             grupos[cat].push(p);
@@ -267,17 +273,17 @@ onMounted(() => {
 });
 const showRecuperarModal = ref(false);
 const pedidoGuardado = ref<any[] | null>(null);
-    const aceptarRecuperarPedido = () => {
-        if (pedidoGuardado.value) {
-            carrito.value = pedidoGuardado.value;
-        }
-        showRecuperarModal.value = false;
-    };
+const aceptarRecuperarPedido = () => {
+    if (pedidoGuardado.value) {
+        carrito.value = pedidoGuardado.value;
+    }
+    showRecuperarModal.value = false;
+};
 
-    const rechazarRecuperarPedido = () => {
-        localStorage.removeItem('carrito_pedido');
-        showRecuperarModal.value = false;
-    };
+const rechazarRecuperarPedido = () => {
+    localStorage.removeItem('carrito_pedido');
+    showRecuperarModal.value = false;
+};
 
 </script>
 
@@ -293,6 +299,14 @@ const pedidoGuardado = ref<any[] | null>(null);
             <div class="flex flex-wrap gap-2 items-center mb-4">
                 <input v-model="filtro" type="text" placeholder="Buscar productos..."
                     class="flex-1 min-w-[150px] border px-3 py-2 rounded text-sm border-[#c5a880] dark:border-[#8c5c3b] bg-white dark:bg-[#1d1b16] text-[#4b3621] dark:text-white" />
+                <select v-model="filtroCategoria"
+                    class="flex-1 min-w-[150px] border px-3 py-2 rounded text-sm border-[#c5a880] dark:border-[#8c5c3b] bg-white dark:bg-[#1d1b16] text-[#4b3621] dark:text-white">
+                    <option value="">Todas las categorías</option>
+                    <option v-for="cat in categoriasDisponibles" :key="cat" :value="cat">
+                        {{ cat }}
+                    </option>
+                </select>
+
 
                 <label class="flex items-center gap-2 text-sm text-[#4b3621] dark:text-white">
                     <input type="checkbox" v-model="filtroSoloDisponibles"
@@ -314,7 +328,6 @@ const pedidoGuardado = ref<any[] | null>(null);
                     class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded shadow">
                     Mis pedidos
                 </button>
-
 
             </div>
 
