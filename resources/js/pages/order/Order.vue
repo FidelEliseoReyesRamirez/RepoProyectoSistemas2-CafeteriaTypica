@@ -226,10 +226,11 @@ onMounted(() => {
         if (data) {
             try {
                 const parsed = JSON.parse(data);
-                carrito.value = parsed.map((item: any) => ({
+                pedidoGuardado.value = parsed.map((item: any) => ({
                     ...item,
                     comentario: item.comentario ?? '',
                 }));
+                showRecuperarModal.value = true;
             } catch (e) {
                 console.error('Error al cargar carrito local:', e);
                 localStorage.removeItem('carrito_pedido');
@@ -264,6 +265,19 @@ onMounted(() => {
         showHorarioModal.value = true;
     }
 });
+const showRecuperarModal = ref(false);
+const pedidoGuardado = ref<any[] | null>(null);
+    const aceptarRecuperarPedido = () => {
+        if (pedidoGuardado.value) {
+            carrito.value = pedidoGuardado.value;
+        }
+        showRecuperarModal.value = false;
+    };
+
+    const rechazarRecuperarPedido = () => {
+        localStorage.removeItem('carrito_pedido');
+        showRecuperarModal.value = false;
+    };
 
 </script>
 
@@ -474,6 +488,24 @@ onMounted(() => {
                     <button @click="showHorarioModal = false"
                         class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded">
                         Aceptar
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Modal de recuperación de pedido -->
+        <div v-if="showRecuperarModal"
+            class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg w-full max-w-sm shadow-xl text-center">
+                <h2 class="text-lg font-bold mb-4 text-[#4b3621] dark:text-[#d9a679]">¿Recuperar pedido anterior?</h2>
+                <p class="text-sm mb-6">Se encontró un pedido anterior sin enviar. ¿Deseas restaurarlo?</p>
+                <div class="flex justify-center gap-4">
+                    <button @click="rechazarRecuperarPedido"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded">
+                        No, descartarlo
+                    </button>
+                    <button @click="aceptarRecuperarPedido"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">
+                        Sí, restaurar
                     </button>
                 </div>
             </div>
