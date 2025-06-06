@@ -3,7 +3,6 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
-import Datepicker from 'vue3-datepicker';
 
 const props = defineProps<{ fechas: string[] }>();
 
@@ -13,6 +12,21 @@ const fechasDisponibles = computed(() =>
 
 const fechaInicio = ref<Date | undefined>();
 const fechaFin = ref<Date | undefined>();
+const fechaInicioTexto = ref<string | null>(null);
+const fechaFinTexto = ref<string | null>(null);
+
+watch(fechaInicioTexto, val => {
+    fechaInicio.value = val ? new Date(val + 'T00:00:00') : undefined;
+});
+watch(fechaFinTexto, val => {
+    fechaFin.value = val ? new Date(val + 'T00:00:00') : undefined;
+});
+watch(fechaInicio, val => {
+    fechaInicioTexto.value = val ? val.toISOString().split('T')[0] : null;
+});
+watch(fechaFin, val => {
+    fechaFinTexto.value = val ? val.toISOString().split('T')[0] : null;
+});
 
 const resumen = ref<{ Efectivo: number, Tarjeta: number, QR: number, Total: number } | null>(null);
 const metodoFiltro = ref<'Todos' | 'Efectivo' | 'Tarjeta' | 'QR'>('Todos');
@@ -61,7 +75,6 @@ const exportarExcel = () => {
     cerrarModal();
 };
 
-
 const formatDate = (date?: Date): string | null =>
     date ? date.toISOString().split('T')[0] : null;
 
@@ -88,7 +101,6 @@ const cargarPedidos = async (metodo: typeof metodos[number]) => {
             params: metodo !== 'Todos' ? { metodo } : {},
         });
         pedidos.value = [...new Map(data.map((p: any) => [p.id_pedido, p])).values()];
-
         mostrarPedidos.value = true;
     } catch (error) {
         console.error(error);
@@ -97,7 +109,9 @@ const cargarPedidos = async (metodo: typeof metodos[number]) => {
 
 onMounted(() => {
     if (props.fechas.length) {
-        fechaInicio.value = new Date(props.fechas[0] + 'T00:00:00');
+        const inicio = new Date(props.fechas[0] + 'T00:00:00');
+        fechaInicio.value = inicio;
+        fechaInicioTexto.value = inicio.toISOString().split('T')[0];
         cargarResumen();
     }
     cargarColumnas();
@@ -129,6 +143,7 @@ const cerrarResumen = () => {
     showResumen.value = false;
 };
 </script>
+
 
 <template>
     <AppLayout>
@@ -162,7 +177,7 @@ const cerrarResumen = () => {
                     <div class="flex justify-between items-center mb-4">
                         <button @click="toggleSeleccionarTodo" class="text-sm text-blue-600 hover:underline">
                             {{ columnasSeleccionadas.length === todasColumnas.length ? 'Deseleccionar todo' :
-                                'Seleccionar todo' }}
+                            'Seleccionar todo' }}
                         </button>
                     </div>
                     <div class="flex justify-end gap-2">
@@ -180,20 +195,15 @@ const cerrarResumen = () => {
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div>
                     <label class="block mb-1 text-sm font-semibold">Fecha de inicio:</label>
-                    <Datepicker :model-value="fechaInicio ?? undefined"
-                        @update:model-value="fechaInicio = $event ?? undefined" placeholder="Selecciona fecha de inicio"
-:input-class="'w-full border px-3 py-2 rounded text-black placeholder:text-gray-500 bg-white dark:bg-[#1e1e1e] dark:text-white'"
-                        :format="'yyyy-MM-dd'" :available-dates="{ dates: fechasDisponibles }" />
-
+                    <input type="date" v-model="fechaInicioTexto"
+                        class="w-full border px-3 py-2 rounded text-black bg-white dark:bg-[#1e1e1e] dark:text-white" />
                 </div>
 
                 <div>
                     <label class="block mb-1 text-sm font-semibold">Fecha de fin (opcional):</label>
-                    <Datepicker :model-value="fechaFin ?? undefined"
-                        @update:model-value="fechaFin = $event ?? undefined" placeholder="Selecciona fecha de fin"
-                        :input-class="'w-full border border-black px-3 py-2 rounded bg-white text-black placeholder:text-gray-500'"
-                        :format="'yyyy-MM-dd'" :available-dates="{ dates: fechasDisponibles }"
-                        :disabled-dates="{ predicate: (d: Date) => !!fechaInicio && d < fechaInicio }" />
+                    <input type="date" v-model="fechaFinTexto"
+                        class="w-full border px-3 py-2 rounded text-black bg-white dark:bg-[#1e1e1e] dark:text-white"
+                        :min="fechaInicioTexto || undefined" />
                 </div>
 
                 <div>
