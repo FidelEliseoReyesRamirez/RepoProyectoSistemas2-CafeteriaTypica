@@ -166,11 +166,15 @@ const soloLetras = (e: KeyboardEvent) => {
                             class="bg-[#6b4f3c] hover:bg-[#8c5c3b] text-white px-4 py-2 rounded shadow w-full sm:w-auto">
                             Generar contraseña
                         </Button>
-
+                        <Button type="button" @click="router.visit('/users')"
+                            class="bg-gray-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg shadow w-full sm:w-auto">
+                            Cancelar
+                        </Button>
                         <Button type="submit"
                             class="bg-[#a47148] hover:bg-[#8c5c3b] text-white font-semibold py-2 px-6 rounded-lg shadow w-full sm:w-auto">
                             Crear usuario
                         </Button>
+                       
                     </div>
                 </form>
             </div>

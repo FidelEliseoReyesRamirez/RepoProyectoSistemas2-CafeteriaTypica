@@ -7,6 +7,15 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+    server: {
+        host:  'localhost',
+        port: 5173,
+        strictPort: true,
+        cors: {
+            origin: 'http://127.0.0.1:8000',
+            credentials: true,
+        },
+    },
     plugins: [
         laravel({
             input: ['resources/js/app.ts'],
