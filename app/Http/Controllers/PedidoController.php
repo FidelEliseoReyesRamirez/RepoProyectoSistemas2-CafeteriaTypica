@@ -251,7 +251,9 @@ class PedidoController extends Controller
 
                 $estadoModificado = Estadopedido::where('nombre_estado', 'Modificado')->firstOrFail();
                 $pedido->estado_actual = $estadoModificado->id_estado;
+                $pedido->fecha_hora_registro = now();
                 $pedido->save();
+
 
                 $admin = Auth::user()->nombre;
                 $meseroOriginal = $pedido->usuario?->nombre ?? 'Sin asignar';

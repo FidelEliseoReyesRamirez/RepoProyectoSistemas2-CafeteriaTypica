@@ -1,25 +1,28 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 
-const previousStates = ref<Record<number, string>>({});
+const previousSnapshots = ref<Record<number, string>>({});
 const audioContext = new AudioContext();
 const audioBuffers = new Map<string, AudioBuffer>();
-const tiempoPendiente = ref<Record<number, number>>({});
+const tiempoPorPedido = ref<Record<number, number>>({});
 
 const INTERVALO_MS = 10000;
-const LIMITE_MS = 3 * 60 * 1000; 
+const LIMITE_MS = 3 * 60 * 1000;
 let primeraCarga = true;
 
+// Función para normalizar estado
 const normalizarEstado = (estado: string) => {
   return estado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').trim().replace(/\s+/g, '_');
 };
 
+// Desbloquear contexto de audio
 const unlockAudioContext = () => {
   if (audioContext.state === 'suspended') {
     audioContext.resume();
   }
 };
 
+// Cargar sonidos
 const cargarAudios = async () => {
   const estados = ['pendiente', 'modificado', 'recordatorio'];
   for (const estado of estados) {
@@ -32,6 +35,7 @@ const cargarAudios = async () => {
   }
 };
 
+// Reproducir sonido según estado
 const reproducirAudio = (estado: string) => {
   const buffer = audioBuffers.get(estado);
   if (buffer) {
@@ -42,6 +46,17 @@ const reproducirAudio = (estado: string) => {
   }
 };
 
+// Crear snapshot del pedido
+const snapshotPedido = (pedido: any): string => {
+  const estado = pedido.estadopedido?.nombre_estado ?? '';
+  const detalles = (pedido.detallepedidos ?? [])
+    .map((d: any) => `${d.id_producto}-${d.cantidad}-${d.comentario ?? ''}`)
+    .sort()
+    .join('|');
+  return `${estado}|${detalles}`;
+};
+
+// Actualizar pedidos
 const actualizarPedidos = async () => {
   try {
     const response = await fetch('/api/kitchen-orders');
@@ -52,12 +67,13 @@ const actualizarPedidos = async () => {
 
     for (const pedido of todos) {
       const id = pedido.id_pedido;
-      const actual = pedido.estadopedido.nombre_estado;
-      const anterior = previousStates.value[id];
-      const estadoKey = normalizarEstado(actual);
+      const estado = pedido.estadopedido?.nombre_estado ?? '';
+      const estadoKey = normalizarEstado(estado);
+      const snapshot = snapshotPedido(pedido);
+      const anterior = previousSnapshots.value[id];
 
       const debeSonar =
-        (!anterior || anterior !== actual) &&
+        (!anterior || anterior !== snapshot) &&
         !primeraCarga &&
         ['pendiente', 'modificado'].includes(estadoKey);
 
@@ -65,17 +81,17 @@ const actualizarPedidos = async () => {
         reproducirAudio(estadoKey);
       }
 
-      if (estadoKey === 'pendiente') {
-        tiempoPendiente.value[id] = (tiempoPendiente.value[id] || 0) + INTERVALO_MS;
-        if (tiempoPendiente.value[id] >= LIMITE_MS) {
+      if (['pendiente', 'modificado'].includes(estadoKey)) {
+        tiempoPorPedido.value[id] = (tiempoPorPedido.value[id] || 0) + INTERVALO_MS;
+        if (tiempoPorPedido.value[id] >= LIMITE_MS) {
           reproducirAudio('recordatorio');
-          tiempoPendiente.value[id] = 0;
+          tiempoPorPedido.value[id] = 0;
         }
       } else {
-        delete tiempoPendiente.value[id];
+        delete tiempoPorPedido.value[id];
       }
 
-      previousStates.value[id] = actual;
+      previousSnapshots.value[id] = snapshot;
     }
 
     primeraCarga = false;

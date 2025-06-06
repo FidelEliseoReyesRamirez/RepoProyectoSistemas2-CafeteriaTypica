@@ -100,8 +100,14 @@ const agregarProducto = (producto: Producto) => {
 };
 
 const quitarProducto = (id: number) => {
+    if (carrito.value.length === 1 && props.pedidoId !== undefined) {
+        abrirModalError('Para quitar todos los productos del pedido, por favor cancela el pedido.');
+        return;
+    }
+
     carrito.value = carrito.value.filter(p => p.id_producto !== id);
 };
+
 
 const enviarPedido = () => {
     if (carrito.value.length === 0) return;
@@ -171,8 +177,7 @@ const buscarStock = (id_producto: number) => {
 
 
 const validarCantidad = (item: { id_producto: number; cantidad: number | null | undefined }) => {
-    if (item.cantidad == null || item.cantidad === '') return;
-
+    if (item.cantidad == null) return;
     const stock = buscarStock(item.id_producto);
 
     if (item.cantidad > stock) {
@@ -450,7 +455,8 @@ onMounted(() => {
         <div v-if="showErrorModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
             <div class="bg-white dark:bg-[#2c211b] rounded-lg shadow-xl p-6 max-w-md w-full">
                 <h2 class="text-lg font-bold text-red-600 mb-2">Error</h2>
-                <p class="text-sm mb-4">Ocurrió un error inesperado. Intente nuevamente. La cantidad mínima de un producto es: 1</p>
+                <p class="text-sm mb-4">Ocurrió un error inesperado. Intente nuevamente. La cantidad mínima de un
+                    producto es: 1</p>
                 <div class="flex justify-end">
                     <button @click="recargarPagina" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
                         Recargar
