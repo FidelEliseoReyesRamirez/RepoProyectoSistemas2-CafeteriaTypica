@@ -69,8 +69,10 @@ const reproducirAudio = (estado: string) => {
 const actualizarPedidos = async () => {
     try {
         const response = await fetch('/api/my-orders');
-        if (!response.ok) return;
-
+        if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+            console.warn('[AppAudioWatcher] Respuesta inválida, posiblemente HTML (no autenticado)');
+            return;
+        }
         const data = await response.json();
         for (const pedido of data.orders) {
             const id = pedido.id_pedido;
@@ -78,18 +80,14 @@ const actualizarPedidos = async () => {
             const anterior = previousStates.value[id];
             const estadoKey = normalizarEstado(actual);
 
-            if (
+            const debeSonar =
                 (!anterior || anterior !== actual) &&
                 !primeraCarga &&
-                pedido.actualizado_por_id !== user?.id_usuario
-            ) {
-                if (estadoKey === 'pendiente' && user?.id_rol === 2) {
-                    reproducirAudio('pendiente');
-                } else if (estadoKey !== 'pendiente' && (estadoKey !== 'rechazado' || user?.id_rol === 2)) {
-                    reproducirAudio(estadoKey);
-                }
-            }
+                ['pendiente', 'modificado', 'rechazado', 'cancelado', 'listo', 'en_preparacion', 'entregado', 'pagado'].includes(estadoKey);
 
+            if (debeSonar) {
+                reproducirAudio(estadoKey);
+            }
 
             if (estadoKey === 'pendiente') {
                 tiempoPendiente.value[id] = (tiempoPendiente.value[id] || 0) + INTERVALO_MS;
@@ -105,20 +103,22 @@ const actualizarPedidos = async () => {
         }
 
         primeraCarga = false;
-
     } catch (error) {
         console.error('Error actualizando pedidos:', error);
     }
 };
 
-let intervalo: number;
+let intervalo: ReturnType<typeof setInterval>;
 
 onMounted(() => {
+    if (!user || ![1, 2].includes(user.id_rol)) return;
     document.addEventListener('click', unlockAudioContext, { once: true });
     cargarAudios();
     actualizarPedidos();
-    intervalo = setInterval(actualizarPedidos, INTERVALO_MS);
+    intervalo = setInterval(actualizarPedidos, INTERVALO_MS) as unknown as number;
+
 });
+
 
 onUnmounted(() => {
     clearInterval(intervalo);

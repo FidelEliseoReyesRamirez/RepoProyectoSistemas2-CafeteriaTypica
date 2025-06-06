@@ -8,7 +8,6 @@ import axios, { AxiosError } from 'axios';
 const page = usePage<PageProps>();
 const user = page.props.auth?.user;
 
-// Filtros
 const filtroNumero = ref('');
 const filtroEstado = ref('');
 const filtroTiempo = ref('');
@@ -44,63 +43,11 @@ const filtrarPorTiempo = (fecha: string) => {
   }
 };
 
-// Pedidos
 const pedidosActivos = ref<any[]>([]);
 const pedidosCancelados = ref<any[]>([]);
 const pedidoResumen = ref<any | null>(null);
 const mostrarResumen = ref(false);
 
-// Audio reactivo
-const previousStates = ref<Record<number, string>>({});
-const audioContext = new AudioContext();
-const audioBuffers = new Map<string, AudioBuffer>();
-const tiempoPendiente = ref<Record<number, number>>({});
-const INTERVALO_MS = 3000;
-const LIMITE_MS = 5 * 60 * 1000;
-let primeraCarga = true;
-
-const normalizarEstado = (estado: string) => {
-
-  const mapa: Record<string, string> = { 'listo para servir': 'listo' };
-  const estadoNormal = estado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').trim();
-  return mapa[estadoNormal] ?? estadoNormal.replace(/\s+/g, '_');
-};
-
-const unlockAudioContext = () => {
-  if (audioContext.state === 'suspended') {
-    audioContext.resume();
-  }
-};
-
-const cargarAudios = async () => {
-  const estados = [
-    'pendiente', 'en_preparacion', 'listo', 'entregado',
-    'cancelado', 'pagado', 'modificado', 'rechazado', 'recordatorio',
-  ];
-
-  for (const estado of estados) {
-    try {
-      const response = await fetch(`/sounds/${estado}.mp3`);
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = await audioContext.decodeAudioData(arrayBuffer);
-      audioBuffers.set(estado, buffer);
-    } catch {
-      console.warn(`No se pudo cargar el audio: ${estado}`);
-    }
-  }
-};
-const ultimoAudioReproducido = ref<Record<number, string>>({});
-
-const reproducirAudio = (estado: string) => {
-  const buffer = audioBuffers.get(estado);
-  if (buffer) {
-    console.log(`[${new Date().toISOString()}] SONIDO: ${estado}`);
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioContext.destination);
-    source.start(0);
-  }
-};
 const cargarPedidos = async () => {
   const { data } = await axios.get('/api/kitchen-orders');
 
@@ -110,55 +57,6 @@ const cargarPedidos = async () => {
   );
 
   pedidosCancelados.value = data.cancelados;
-
-  const todosLosPedidos = [
-    ...data.activos,
-    ...data.cancelados,
-    ...(data.entregados ?? []),
-    ...(data.rechazados ?? []),
-    ...(data.pagados ?? []),
-    ...(data.modificados ?? []),
-  ];
-
-  for (const pedido of todosLosPedidos) {
-  const id = pedido.id_pedido;
-  const actual = pedido.estadopedido.nombre_estado;
-  const anterior = previousStates.value[id];
-  const estadoKey = normalizarEstado(actual);
-  const cambiadoPorId = pedido.actualizado_por_id;
-
-  const ultimoEstadoSonado = ultimoAudioReproducido.value[id];
-
-  const debeSonar =
-    (!anterior || anterior !== actual) &&
-    !primeraCarga &&
-    cambiadoPorId !== user?.id_usuario &&
-    (
-      ![1, 3].includes(user?.id_rol ?? 0) ||
-      ['pendiente', 'modificado', 'cancelado', 'rechazado'].includes(estadoKey)
-    ) &&
-    (ultimoEstadoSonado !== estadoKey);
-
-  if (debeSonar) {
-    reproducirAudio(estadoKey);
-    ultimoAudioReproducido.value[id] = estadoKey;
-  }
-
-  if (estadoKey === 'pendiente') {
-    tiempoPendiente.value[id] = (tiempoPendiente.value[id] || 0) + INTERVALO_MS;
-    if (tiempoPendiente.value[id] >= LIMITE_MS) {
-      reproducirAudio('recordatorio');
-      tiempoPendiente.value[id] = 0;
-    }
-  } else {
-    delete tiempoPendiente.value[id];
-  }
-
-  previousStates.value[id] = actual;
-}
-
-primeraCarga = false;
-
 };
 
 const cambiarEstado = async (id: number, nuevoEstado: string) => {
@@ -220,14 +118,10 @@ const pedidosFiltrados = computed(() =>
 );
 
 onMounted(() => {
-  document.addEventListener('click', unlockAudioContext, { once: true });
-  cargarAudios();
   cargarPedidos();
-  setInterval(cargarPedidos, INTERVALO_MS);
+  setInterval(cargarPedidos, 3000);
 });
 </script>
-
-
 
 <template>
   <AppLayout>

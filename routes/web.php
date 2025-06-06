@@ -88,20 +88,7 @@ Route::middleware(['auth', 'is_mesero_or_admin'])->group(function () {
 use Illuminate\Support\Facades\Auth;
 use App\Models\Pedido;
 
-Route::middleware('auth')->get('/api/my-orders', function (Request $request) {
-    if (!$request->expectsJson()) {
-        return redirect()->route('orders.my');
-    }
-
-    $userId = Auth::id();
-
-    $orders = Pedido::with(['detallepedidos.producto', 'estadopedido'])
-        ->where('id_usuario_mesero', $userId)
-        ->orderByDesc('fecha_hora_registro')
-        ->get();
-
-    return response()->json(['orders' => $orders]);
-});
+Route::get('/api/my-orders', [PedidoController::class, 'myOrdersJson']);
 
 
 
@@ -116,7 +103,7 @@ Route::middleware(['auth', 'is_admin'])->group(function () {
     Route::get('/config', [ConfiguracionController::class, 'index'])->name('config.index');
     Route::post('/configuracion', [ConfiguracionController::class, 'update'])->name('config.update');
 });
-Route::get('/api/my-orders', [PedidoController::class, 'myOrdersJson']);
+
 
 use App\Http\Controllers\ConfigHorarioAtencionController;
 
