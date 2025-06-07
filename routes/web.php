@@ -166,3 +166,10 @@ Route::get('/pedido/{id}/admin-pdf', [PedidoControllerAdminPDF::class, 'generarP
 use App\Http\Controllers\AllPedidosExportController;
 
 Route::get('/exportar-pedidos', [AllPedidosExportController::class, 'export'])->name('pedidos.export');
+
+use App\Http\Controllers\Admin\DashboardController;
+
+Route::middleware(['auth', 'verified', \App\Http\Middleware\IsAdmin::class])->prefix('admin')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::post('/generar-prediccion', [DashboardController::class, 'generarPrediccion'])->name('admin.generar-prediccion');
+});

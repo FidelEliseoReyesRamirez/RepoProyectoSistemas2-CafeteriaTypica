@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Head, usePage } from '@inertiajs/vue3';
-import PlaceholderPattern from '@/components/PlaceholderPattern.vue';
+import { usePage } from '@inertiajs/vue3';
 import type { BreadcrumbItem } from '@/types';
 import axios from 'axios';
-
-// Import icon components (adjust the path and library as needed)
 import { RefreshCw, Brain, Zap } from 'lucide-vue-next';
 
 interface Metrics {
@@ -15,13 +12,15 @@ interface Metrics {
   ticketPromedio: number;
 }
 
-const { forecast, topProduct, metrics, comboSugerido, ventasDiarias } = (usePage().props as unknown) as {
+const { forecast, topProduct, metrics, comboSugerido, ventasDiarias, forecastPorProducto } = (usePage().props as unknown) as {
   forecast: any[];
   topProduct: any;
   metrics: Metrics;
   comboSugerido: any[];
   ventasDiarias: any[];
+  forecastPorProducto: Record<string, { ds: string; yhat: number }[]>;
 };
+
 const isGenerating = ref(false);
 const lastUpdated = ref(new Date());
 
@@ -37,6 +36,7 @@ const generarPrediccion = async () => {
     isGenerating.value = false;
   }
 };
+
 defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
 </script>
 
@@ -48,7 +48,6 @@ defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
           <h1 class="text-3xl font-bold">Dashboard de Ventas</h1>
           <p class="text-gray-500 text-sm">Actualizado a las {{ lastUpdated.toLocaleTimeString() }}</p>
         </div>
-
         <button
           :disabled="isGenerating"
           @click="generarPrediccion"
@@ -80,27 +79,16 @@ defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Gráfico de Predicción (QuickChart.io) -->
         <div class="p-4 border rounded-xl bg-white">
-          <h3 class="text-lg font-semibold mb-2">Predicción de Demanda</h3>
+          <h3 class="text-lg font-semibold mb-2">Predicción de Demanda General</h3>
           <img
             :src="`https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
               type: 'line',
               data: {
                 labels: forecast.map(f => f.ds.slice(0, 10)),
                 datasets: [
-                  {
-                    label: 'Predicción',
-                    data: forecast.map(f => f.yhat),
-                    fill: false,
-                    borderColor: '#3B82F6'
-                  },
-                  {
-                    label: 'Real',
-                    data: forecast.map(f => f.real || null),
-                    fill: false,
-                    borderColor: '#10B981'
-                  }
+                  { label: 'Predicción', data: forecast.map(f => f.yhat), fill: false, borderColor: '#3B82F6' },
+                  { label: 'Real', data: forecast.map(f => f.real || null), fill: false, borderColor: '#10B981' }
                 ]
               }
             }))}`"
@@ -109,7 +97,6 @@ defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
           />
         </div>
 
-        <!-- Ventas por Día -->
         <div class="p-4 border rounded-xl bg-white">
           <h3 class="text-lg font-semibold mb-2">Ventas por Día</h3>
           <img
@@ -126,7 +113,38 @@ defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
         </div>
       </div>
 
-      <!-- Combo Sugerido -->
+      <!-- Predicción por Producto -->
+      <div class="p-4 border rounded-xl bg-white">
+        <h3 class="text-lg font-semibold mb-4">Predicción por Producto</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div
+            v-for="(predicciones, productoId) in forecastPorProducto"
+            :key="productoId"
+            class="border rounded-xl p-4"
+          >
+            <h4 class="font-semibold text-sm mb-2">Producto ID {{ productoId }}</h4>
+            <img
+              :src="`https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
+                type: 'line',
+                data: {
+                  labels: predicciones.map(p => p.ds.slice(0, 10)),
+                  datasets: [
+                    {
+                      label: 'Predicción',
+                      data: predicciones.map(p => p.yhat),
+                      fill: false,
+                      borderColor: '#3B82F6'
+                    }
+                  ]
+                }
+              }))}`"
+              alt="Predicción Producto"
+              class="rounded w-full"
+            />
+          </div>
+        </div>
+      </div>
+
       <div class="p-4 border rounded-xl bg-white">
         <h3 class="text-lg font-semibold mb-4">Combo Sugerido</h3>
         <ul class="list-disc list-inside space-y-1">
