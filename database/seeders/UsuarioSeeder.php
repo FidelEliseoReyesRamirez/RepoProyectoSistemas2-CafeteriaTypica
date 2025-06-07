@@ -46,11 +46,24 @@ class UsuarioSeeder extends Seeder
                 'eliminado' => 0,
                 'intentos_fallidos' => 0,
             ],
+            [
+                'nombre' => 'Adriano Daza',
+                'email' => 'dazaadriano12@gmail.com',
+                'contrasena_hash' => '$2y$12$4vSRw07duWNPwWLx8DSs4./rHbqfus4jdSBWUv433tKpADXN7E.xW',
+                'estado' => 'Activo',
+                'id_rol' => 1,
+                'bloqueado' => 0,
+                'bloqueado_hasta' => null,
+                'bloqueos_hoy' => 0,
+                'eliminado' => 0,
+                'intentos_fallidos' => 0,
+            ],
+
         ];
 
         foreach ($usuarios as $usuario) {
             Usuario::updateOrCreate(
-                ['email' => $usuario['email']], 
+                ['email' => $usuario['email']],
                 $usuario
             );
         }
