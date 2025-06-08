@@ -7,19 +7,31 @@ import axios from 'axios';
 import { RefreshCw, Brain, Zap } from 'lucide-vue-next';
 
 interface Metrics {
-  ventasSemana: number;
-  clientesAtendidos: number;
-  ticketPromedio: number;
+  ventasSemana?: number;
+  clientesAtendidos?: number;
+  ticketPromedio?: number;
 }
 
-const { forecast, topProduct, metrics, comboSugerido, ventasDiarias, forecastPorProducto } = (usePage().props as unknown) as {
-  forecast: any[];
-  topProduct: any;
-  metrics: Metrics;
-  comboSugerido: any[];
-  ventasDiarias: any[];
-  forecastPorProducto: Record<string, { ds: string; yhat: number }[]>;
-};
+// Datos con valores por defecto seguros
+const pageProps = computed(() => {
+  const props = (usePage().props as unknown) as {
+    forecast?: any[];
+    topProduct?: any;
+    metrics?: Metrics;
+    comboSugerido?: any[];
+    ventasDiarias?: any[];
+    forecastPorProducto?: Record<string, { ds: string; yhat: number }[]>;
+  };
+
+  return {
+    forecast: props.forecast || [],
+    topProduct: props.topProduct || { nombre: 'N/A', cantidad: 0 },
+    metrics: props.metrics || { ventasSemana: 0, clientesAtendidos: 0, ticketPromedio: 0 },
+    comboSugerido: props.comboSugerido || [],
+    ventasDiarias: props.ventasDiarias || [],
+    forecastPorProducto: props.forecastPorProducto || {}
+  };
+});
 
 const isGenerating = ref(false);
 const lastUpdated = ref(new Date());
@@ -59,36 +71,38 @@ defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
         </button>
       </div>
 
+      <!-- Sección de métricas con protección contra undefined -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="p-4 border rounded-xl bg-white">
           <p class="text-gray-500 text-sm">Ventas Semana</p>
-          <p class="text-xl font-bold">${{ metrics.ventasSemana }}</p>
+          <p class="text-xl font-bold">${{ pageProps.metrics.ventasSemana }}</p>
         </div>
         <div class="p-4 border rounded-xl bg-white">
           <p class="text-gray-500 text-sm">Clientes Atendidos</p>
-          <p class="text-xl font-bold">{{ metrics.clientesAtendidos }}</p>
+          <p class="text-xl font-bold">{{ pageProps.metrics.clientesAtendidos }}</p>
         </div>
         <div class="p-4 border rounded-xl bg-white">
           <p class="text-gray-500 text-sm">Ticket Promedio</p>
-          <p class="text-xl font-bold">${{ metrics.ticketPromedio }}</p>
+          <p class="text-xl font-bold">${{ pageProps.metrics.ticketPromedio }}</p>
         </div>
         <div class="p-4 border rounded-xl bg-white">
           <p class="text-gray-500 text-sm">Producto Top</p>
-          <p class="text-xl font-bold">{{ topProduct.nombre }} ({{ topProduct.cantidad }} ventas)</p>
+          <p class="text-xl font-bold">{{ pageProps.topProduct.nombre }} ({{ pageProps.topProduct.cantidad }} ventas)</p>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Gráficos con protección contra arrays vacíos -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" v-if="pageProps.forecast.length > 0 && pageProps.ventasDiarias.length > 0">
         <div class="p-4 border rounded-xl bg-white">
           <h3 class="text-lg font-semibold mb-2">Predicción de Demanda General</h3>
           <img
             :src="`https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
               type: 'line',
               data: {
-                labels: forecast.map(f => f.ds.slice(0, 10)),
+                labels: pageProps.forecast.map(f => f.ds?.slice(0, 10) || ''),
                 datasets: [
-                  { label: 'Predicción', data: forecast.map(f => f.yhat), fill: false, borderColor: '#3B82F6' },
-                  { label: 'Real', data: forecast.map(f => f.real || null), fill: false, borderColor: '#10B981' }
+                  { label: 'Predicción', data: pageProps.forecast.map(f => f.yhat), fill: false, borderColor: '#3B82F6' },
+                  { label: 'Real', data: pageProps.forecast.map(f => f.real || null), fill: false, borderColor: '#10B981' }
                 ]
               }
             }))}`"
@@ -103,8 +117,8 @@ defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
             :src="`https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
               type: 'bar',
               data: {
-                labels: ventasDiarias.map(v => v.dia),
-                datasets: [{ label: 'Ventas', data: ventasDiarias.map(v => v.ventas), backgroundColor: '#10B981' }]
+                labels: pageProps.ventasDiarias.map(v => v.dia),
+                datasets: [{ label: 'Ventas', data: pageProps.ventasDiarias.map(v => v.ventas), backgroundColor: '#10B981' }]
               }
             }))}`"
             alt="Ventas diarias"
@@ -112,13 +126,16 @@ defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
           />
         </div>
       </div>
+      <div v-else class="p-4 border rounded-xl bg-white text-center text-gray-500">
+        Cargando datos de gráficos...
+      </div>
 
-      <!-- Predicción por Producto -->
-      <div class="p-4 border rounded-xl bg-white">
+      <!-- Predicción por Producto con protección -->
+      <div class="p-4 border rounded-xl bg-white" v-if="Object.keys(pageProps.forecastPorProducto).length > 0">
         <h3 class="text-lg font-semibold mb-4">Predicción por Producto</h3>
         <div class="grid md:grid-cols-2 gap-4">
           <div
-            v-for="(predicciones, productoId) in forecastPorProducto"
+            v-for="(predicciones, productoId) in pageProps.forecastPorProducto"
             :key="productoId"
             class="border rounded-xl p-4"
           >
@@ -127,7 +144,7 @@ defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
               :src="`https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
                 type: 'line',
                 data: {
-                  labels: predicciones.map(p => p.ds.slice(0, 10)),
+                  labels: predicciones.map(p => p.ds?.slice(0, 10) || ''),
                   datasets: [
                     {
                       label: 'Predicción',
@@ -145,10 +162,11 @@ defineProps<{ breadcrumbs?: BreadcrumbItem[] }>();
         </div>
       </div>
 
-      <div class="p-4 border rounded-xl bg-white">
+      <!-- Combo Sugerido con protección -->
+      <div class="p-4 border rounded-xl bg-white" v-if="pageProps.comboSugerido.length > 0">
         <h3 class="text-lg font-semibold mb-4">Combo Sugerido</h3>
         <ul class="list-disc list-inside space-y-1">
-          <li v-for="(item, i) in comboSugerido" :key="i">
+          <li v-for="(item, i) in pageProps.comboSugerido" :key="i">
             {{ item.producto }} ({{ item.frecuencia }} veces)
           </li>
         </ul>

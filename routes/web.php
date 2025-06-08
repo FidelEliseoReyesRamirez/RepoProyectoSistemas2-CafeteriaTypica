@@ -9,18 +9,14 @@ use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\Admin\DashboardController;
 
 // Ruta para Dashboard, solo accesible para admin
-// Versión unificada y organizada
-Route::middleware(['auth', 'verified', IsAdmin::class])->prefix('admin')->group(function () {
-    // Ruta para el dashboard (usando el controlador)
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+Route::get('/dashboard', function () {
+    return Inertia::render('Dashboard');
+})->middleware(['auth', 'verified', IsAdmin::class])->name('dashboard');
 
-    // Ruta para generar predicciones
+
+Route::middleware(['auth', 'verified', \App\Http\Middleware\IsAdmin::class])->prefix('admin')->group(function () {
+    Route::get('Dashboard/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::post('/generar-prediccion', [DashboardController::class, 'generarPrediccion'])->name('admin.generar-prediccion');
-
-    // Si necesitas mantener la versión sin prefix como alias (opcional)
-    Route::get('/dashboard-alias', function () {
-        return Inertia::render('Dashboard/Dashboard');
-    })->name('dashboard.alias');
 });
 
 
