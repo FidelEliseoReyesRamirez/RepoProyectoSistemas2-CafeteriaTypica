@@ -6,18 +6,20 @@ use Inertia\Inertia;
 use Illuminate\Http\Request;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Controllers\PedidoController;
-use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\DashboardController;
 
-// Ruta para Dashboard, solo accesible para admin
+// Redirigir dashboard general al del admin
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified', IsAdmin::class])->name('dashboard');
+    return redirect()->route('admin.dashboard');
+})->middleware(['auth', 'verified', IsAdmin::class]);
 
-
-Route::middleware(['auth', 'verified', \App\Http\Middleware\IsAdmin::class])->prefix('admin')->group(function () {
-    Route::get('Dashboard/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+// Rutas para el admin
+Route::middleware(['auth', 'verified', IsAdmin::class])->prefix('admin')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::post('/generar-prediccion', [DashboardController::class, 'generarPrediccion'])->name('admin.generar-prediccion');
+    Route::get('/export-csv', [DashboardController::class, 'exportCSV'])->name('admin.export-csv');
 });
+
 
 
 Route::get('/', function () {
