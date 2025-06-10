@@ -5,22 +5,41 @@ import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { RefreshCw, Brain, Zap } from 'lucide-vue-next';
 
+interface ForecastItem { ds: string; yhat: number; real?: number; }
+interface VentaDia { dia: string; ventas: number; }
+interface ProductoTop { nombre: string; total_vendido: number; }
 interface Metrics {
   ventasSemana: number;
   clientesAtendidos: number;
   ticketPromedio: number;
 }
+interface PageProps {
+  forecast: ForecastItem[];
+  porProducto: Record<number, ForecastItem[]>;
+  topProduct: { nombre: string; cantidad: number };
+  metrics: Metrics;
+  topProductos: ProductoTop[];
+  ventasDiarias: VentaDia[];
+  franjaActiva: { hora: number; cantidad: number } | null;
+  debug?: {
+    forecastExists: boolean;
+    totalPedidos: number;
+    totalDetalles: number;
+    forecastGeneralCount: number;
+    forecastProductCount: number;
+  };
+}
 
 const {
-  forecast,
-  porProducto,
-  porCombo,
-  topProduct,
-  metrics,
-  comboSugerido,
-  ventasDiarias,
-  franjaActiva
-} = (usePage().props as any);
+  forecast = [],
+  porProducto = {},
+  topProduct = { nombre: 'N/A', cantidad: 0 },
+  metrics = { ventasSemana: 0, clientesAtendidos: 0, ticketPromedio: 0 },
+  topProductos = [],
+  ventasDiarias = [],
+  franjaActiva = null,
+  debug = null
+} = usePage().props as unknown as PageProps;
 
 const isGenerating = ref(false);
 const lastUpdated = ref(new Date());
@@ -65,7 +84,7 @@ const exportarCSV = () => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div v-if="metrics" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="p-4 border rounded-xl bg-white">
           <p class="text-sm text-gray-500">Ventas Semana</p>
           <p class="text-xl font-bold">${{ metrics.ventasSemana }}</p>
@@ -116,38 +135,65 @@ const exportarCSV = () => {
       <!-- Predicción por producto -->
       <div class="p-4 bg-white border rounded-xl">
         <h3 class="text-lg font-semibold mb-2">Predicción por Producto</h3>
-        <ul class="space-y-1">
+        <div v-if="Object.keys(porProducto).length === 0" class="text-gray-500 italic">
+          No hay datos de predicción por producto disponibles
+        </div>
+        <ul v-else class="space-y-1">
           <li v-for="(valores, id) in porProducto" :key="id">
             Producto {{ id }}: {{ valores.at(-1)?.yhat?.toFixed(2) }} unidades estimadas
           </li>
         </ul>
       </div>
 
-      <!-- Predicción por combo -->
+      <!-- Top Productos -->
       <div class="p-4 bg-white border rounded-xl">
-        <h3 class="text-lg font-semibold mb-2">Predicción por Combo</h3>
-        <ul class="space-y-1">
-          <li v-for="(valores, nombre) in porCombo" :key="nombre">
-            Combo {{ nombre }}: {{ valores.at(-1)?.yhat?.toFixed(2) }} unidades estimadas
+        <h3 class="text-lg font-semibold mb-2">Top Productos (Último Mes)</h3>
+        <div v-if="topProductos.length === 0" class="text-gray-500 italic">
+          No hay datos de ventas disponibles
+        </div>
+        <ul v-else class="list-disc list-inside space-y-1">
+          <li v-for="(item, i) in topProductos" :key="i">
+            {{ item.nombre }} - {{ item.total_vendido }} unidades vendidas
           </li>
         </ul>
+      </div>
+
+      <!-- Debug Info (temporal) -->
+      <div v-if="debug" class="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+        <h3 class="text-lg font-semibold mb-2 text-yellow-800">Información de Debug</h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <span class="font-medium">Archivo Forecast:</span>
+            <span :class="debug.forecastExists ? 'text-green-600' : 'text-red-600'">
+              {{ debug.forecastExists ? 'Existe' : 'No existe' }}
+            </span>
+          </div>
+          <div>
+            <span class="font-medium">Total Pedidos:</span>
+            <span class="text-blue-600">{{ debug.totalPedidos }}</span>
+          </div>
+          <div>
+            <span class="font-medium">Total Detalles:</span>
+            <span class="text-blue-600">{{ debug.totalDetalles }}</span>
+          </div>
+          <div>
+            <span class="font-medium">Forecast General:</span>
+            <span class="text-purple-600">{{ debug.forecastGeneralCount }} registros</span>
+          </div>
+          <div>
+            <span class="font-medium">Forecast Productos:</span>
+            <span class="text-purple-600">{{ debug.forecastProductCount }} productos</span>
+          </div>
+        </div>
       </div>
 
       <!-- Franja horaria más activa -->
       <div class="p-4 bg-white border rounded-xl">
         <h3 class="text-lg font-semibold mb-2">Franja Horaria Más Activa</h3>
-        <p class="text-gray-600">{{ franjaActiva?.hora }}:00 con {{ franjaActiva?.cantidad }} pedidos</p>
-      </div>
-
-      <!-- Combo sugerido -->
-      <div class="p-4 bg-white border rounded-xl">
-        <h3 class="text-lg font-semibold mb-2">Combo Sugerido</h3>
-        <ul class="list-disc list-inside">
-          <li v-for="(item, i) in comboSugerido" :key="i">
-            {{ item.nombre }} ({{ item.frecuencia }} veces)
-          </li>
-        </ul>
-        <p class="text-sm text-purple-700 mt-2">Sugerido según frecuencia en los últimos 30 días.</p>
+        <p v-if="franjaActiva" class="text-gray-600">
+          {{ franjaActiva.hora }}:00 con {{ franjaActiva.cantidad }} pedidos
+        </p>
+        <p v-else class="text-gray-500 italic">No hay datos disponibles</p>
       </div>
     </div>
   </AppLayout>
