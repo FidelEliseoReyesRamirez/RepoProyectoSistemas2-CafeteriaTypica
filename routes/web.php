@@ -13,13 +13,17 @@ Route::get('/dashboard', function () {
     return redirect()->route('admin.dashboard');
 })->middleware(['auth', 'verified', IsAdmin::class]);
 
-// Rutas para el admin
+// Agrupación segura para rutas del administrador
 Route::middleware(['auth', 'verified', IsAdmin::class])->prefix('admin')->group(function () {
+    // Dashboard (usa el controlador)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+
+    // API interna para generar predicción
     Route::post('/generar-prediccion', [DashboardController::class, 'generarPrediccion'])->name('admin.generar-prediccion');
+
+    // API para exportar CSV
     Route::get('/export-csv', [DashboardController::class, 'exportCSV'])->name('admin.export-csv');
 });
-
 
 
 Route::get('/', function () {
