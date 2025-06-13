@@ -55,10 +55,7 @@ Route::middleware(['auth', 'verified', 'is_admin'])->group(function () {
     Route::get('/api/estados-pedido', [PedidoController::class, 'getEstadosPedido']);
     //RUTAS DE HORACIO HACIA ABAJO
     Route::get('/audit', [AuditoriaController::class, 'index'])->name('audit.index');
-
-
-
-    //NO elimines nada
+    Route::get('/exportar-auditoria', [AuditoriaController::class, 'exportarExcel']);
 });
 
 //PRODUCTOS
@@ -149,7 +146,6 @@ Route::middleware(['auth', 'verified', 'is_admin_or_kitchen'])->group(function (
         return Inertia::render('kitchen/RejectedOrders');
     });
     Route::post('/pedidos/{id}/rechazar', [PedidoController::class, 'rechazarConMotivo']);
-
 });
 
 Route::get('/pedido/{id}/pdf', [PedidoControllerPDF::class, 'generarPDF'])->name('pedido.pdf');
