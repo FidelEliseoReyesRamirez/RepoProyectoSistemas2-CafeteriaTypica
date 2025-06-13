@@ -7,13 +7,34 @@ export interface Rol {
   nombre: string;
 }
 
-
 export interface PageProps extends InertiaPageProps {
   auth: {
     user: User | null;
   };
-  roles?: Rol[]; 
-}
+  roles?: Rol[];
+  config?: {
+    estados_cancelables?: string[];
+    estados_editables?: string[];
+    tiempo_cancelacion_minutos?: number;
+    tiempo_edicion_minutos?: number;
+    tiempos_por_estado?: {
+      [estado: string]: {
+        cancelar: number;
+        editar: number;
+      };
+    };
+    horario_atencion?: {
+      [dia: string]: {
+        hora_inicio: string;
+        hora_fin: string;
+      };
+    };
+  };
+  now?: string;
+};
+
+
+
 
 export interface User {
   id_usuario: number;
