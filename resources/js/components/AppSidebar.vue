@@ -79,7 +79,7 @@ const mainNavItems: NavItem[] = [
   }] : []),
 
   // Nuevo ítem con ícono de blog de notas
-  ...(authUser ? [{
+  ...(authUser && authUser.id_rol === 1 ? [{
     title: 'Auditoria',
     href: '/audit',
     icon: NotebookPen,
@@ -97,7 +97,7 @@ const firstAvailableHref = mainNavItems.length > 0 ? mainNavItems[0].href : '/';
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>
             <Link :href="firstAvailableHref">
-              <AppLogo />
+            <AppLogo />
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
