@@ -3,11 +3,13 @@ import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import type { BreadcrumbItemType } from '@/types';
 import { usePage } from '@inertiajs/vue3';
-import { ref, onMounted } from 'vue';
-
-defineProps<{
+import { ref, onMounted, computed } from 'vue';
+import AppAudioWatcher from '@/components/AppAudioWatcher.vue';
+const props = defineProps<{
     breadcrumbs?: BreadcrumbItemType[];
 }>();
+
+const safeBreadcrumbs = computed(() => props.breadcrumbs ?? []);
 
 const page = usePage() as any;
 const user = page.props.auth?.user as any;
@@ -26,14 +28,15 @@ onMounted(async () => {
     }
 });
 </script>
+
 <template>
     <header
-        class="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/70 px-6 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 md:px-4"
-    >
+        class="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/70 px-6 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 md:px-4">
         <div class="flex items-center gap-2 flex-1">
             <SidebarTrigger class="-ml-1" />
-            <template v-if="breadcrumbs.length > 0">
-                <Breadcrumbs :breadcrumbs="breadcrumbs" />
+            <template v-if="safeBreadcrumbs.length > 0">
+                <Breadcrumbs :breadcrumbs="safeBreadcrumbs" />
+
             </template>
         </div>
 
@@ -41,4 +44,5 @@ onMounted(async () => {
             Rol: {{ rolNombre }}
         </h1>
     </header>
+  <AppAudioWatcher />
 </template>

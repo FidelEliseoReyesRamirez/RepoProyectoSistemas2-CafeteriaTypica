@@ -22,7 +22,7 @@ const submit = () => {
 
 <template>
     <div class="relative min-h-screen bg-cover bg-center flex items-center justify-center px-4 sm:px-6"
-         style="background-image: url('https://scontent.flpb1-1.fna.fbcdn.net/v/t39.30808-6/481669738_1046453534176982_1356778312309744329_n.jpg?_nc_cat=100&ccb=1-7&_nc_sid=127cfc&_nc_ohc=2NuuRGlIumUQ7kNvwFS28qw&_nc_oc=AdnqMo4nj-PVaUcQjy0w_IkktszHl81WnVn6GsBREMlWQU3xhmnNS9iUv5ZUt1VfdQc&_nc_zt=23&_nc_ht=scontent.flpb1-1.fna&_nc_gid=Y9SRmCoEifhsbevmbCIZOw&oh=00_AfHvCLr3737bDfDVJCrTKM_PV5N-mYocAKFRVtrRMWxT-A&oe=68036867');">
+         style="background-image: url('https://images.squarespace-cdn.com/content/v1/5e41b601696d341fa48aad32/1582841786035-WVXU0H3JVFLCCK2JUDNV/PORT-INDEX.jfif?format=1500w');">
   
       <!-- Capa oscura encima del fondo -->
       <div class="absolute inset-0 bg-black/50 z-0"></div>
