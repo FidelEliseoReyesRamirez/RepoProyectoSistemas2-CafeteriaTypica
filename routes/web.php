@@ -9,11 +9,22 @@ use App\Http\Controllers\PedidoController;
 
 
 // Ruta para Dashboard, solo accesible para admin
+// Rutas para el admin
+Route::middleware(['auth', 'verified', IsAdmin::class])->prefix('admin')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::post('/generar-prediccion', [DashboardController::class, 'generarPrediccion'])
+        ->name('admin.generar-prediccion');
+    Route::get('/export-csv', [DashboardController::class, 'exportCSV'])
+        ->name('admin.export-csv');
+    Route::get('/debug', [DashboardController::class, 'debug'])->name('admin.debug');
+});
+
+// Redirigir dashboard general al del admin
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified', IsAdmin::class])->name('dashboard');
+    return redirect()->route('admin.dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
-
+// Redirigir la ruta raíz al login
 Route::get('/', function () {
     return Redirect::route('login');
 })->name('home');
