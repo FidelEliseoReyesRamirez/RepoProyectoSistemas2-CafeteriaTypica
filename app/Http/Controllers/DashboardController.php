@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
@@ -144,44 +145,60 @@ class DashboardController extends Controller
     }
 
     public function generarPrediccion(Request $request)
-{
-    try {
-        $script = base_path('scripts/prophet_forecast.py');
-        $pythonCmd = 'python'; // Usar solo 'python' en Windows
+    {
+        ini_set('max_execution_time', 120);
+        try {
+            $script = base_path('scripts/prophet_forecast.py');
+            $pythonCmd = 'python'; // o usa ruta completa: '/usr/bin/python3'
 
-        // Verificar existencia del script
-        if (!file_exists($script)) {
-            Log::error('Script no encontrado: ' . $script);
-            return response()->json(['error' => 'Script no encontrado'], 500);
+            if (!file_exists($script)) {
+                Log::error('[PROPHET] ❌ Script no encontrado: ' . $script);
+                return response()->json(['error' => 'Script de Prophet no encontrado'], 500);
+            }
+
+            // Verificar si Python está disponible
+            $pythonCheck = exec("which $pythonCmd");
+            Log::info('[PROPHET] Ruta de Python: ' . $pythonCheck);
+
+            if (!$pythonCheck) {
+                return response()->json(['error' => 'Python no está disponible en el sistema'], 500);
+            }
+
+            // Ejecutar el script
+            $cmd = "\"$pythonCmd\" \"$script\"";
+            Log::info('[PROPHET] Ejecutando comando: ' . $cmd);
+
+            $output = [];
+            $status = null;
+
+            exec("$cmd 2>&1", $output, $status);
+
+            Log::info('[PROPHET] Salida del script:', $output);
+            Log::info('[PROPHET] Código de salida: ' . $status);
+
+            if ($status !== 0) {
+                return response()->json([
+                    'error' => 'Error al ejecutar Prophet',
+                    'details' => implode("\n", $output),
+                ], 500);
+            }
+
+            // Verificar si se generó el archivo
+            $forecastPath = storage_path('app/forecast.json');
+            if (!file_exists($forecastPath)) {
+                Log::error('[PROPHET] ❌ No se generó forecast.json');
+                return response()->json(['error' => 'No se generó el archivo forecast.json'], 500);
+            }
+
+            Log::info('[PROPHET] ✓ Predicción generada correctamente');
+            return response()->json(['message' => 'Predicción generada correctamente con Prophet']);
+
+        } catch (\Exception $e) {
+            Log::error('[PROPHET] ❌ Excepción: ' . $e->getMessage());
+            return response()->json(['error' => 'Error interno al ejecutar Prophet'], 500);
         }
-
-        // Ejecutar comando SIMPLIFICADO (Windows)
-        $cmd = escapeshellcmd("$pythonCmd $script");
-        Log::info('Ejecutando comando: ' . $cmd);
-
-        exec($cmd, $output, $status);
-
-        if ($status !== 0) {
-            Log::error('Error al ejecutar Prophet', ['output' => $output, 'status' => $status]);
-            return response()->json([
-                'error' => 'Error al ejecutar el script',
-                'details' => implode("\n", $output),
-            ], 500);
-        }
-
-        // Verificar archivo generado
-        $forecastPath = storage_path('app/forecast.json');
-        if (!file_exists($forecastPath)) {
-            return response()->json(['error' => 'No se generó forecast.json'], 500);
-        }
-
-        return response()->json(['message' => 'Predicción generada correctamente']);
-
-    } catch (\Exception $e) {
-        Log::error('Excepción: ' . $e->getMessage());
-        return response()->json(['error' => 'Error interno'], 500);
     }
-}
+
     public function exportCSV()
     {
         $forecastPath = storage_path('app/forecast.json');
@@ -212,7 +229,6 @@ class DashboardController extends Controller
                 'Content-Type' => 'text/csv',
                 'Content-Disposition' => 'attachment; filename="forecast_' . date('Y-m-d') . '.csv"'
             ]);
-
         } catch (\Exception $e) {
             Log::error('Error al exportar CSV: ' . $e->getMessage());
             return response()->json(['error' => 'Error al generar el archivo CSV'], 500);
@@ -255,5 +271,278 @@ class DashboardController extends Controller
         }
 
         return response()->json($info);
+    }
+    public function getPrediccionesPorProducto(Request $request)
+    {
+        try {
+            $idProducto = $request->get('id_producto');
+            $diasFuturos = $request->get('dias', 30); // Por defecto 30 días
+            $fechaDesde = now()->format('Y-m-d');
+            $fechaHasta = now()->addDays($diasFuturos)->format('Y-m-d');
+
+            $query = DB::table('prediccion as p')
+                ->join('producto as pr', 'p.id_producto', '=', 'pr.id_producto')
+                ->where('p.eliminado', 0)
+                ->where('pr.eliminado', 0)
+                ->whereBetween('p.fecha_predicha', [$fechaDesde, $fechaHasta])
+                ->select(
+                    'p.id_prediccion',
+                    'p.id_producto',
+                    'pr.nombre as producto',
+                    'p.fecha_predicha',
+                    'p.demanda_prevista',
+                    'p.tipo_sugerencia',
+                    'p.sugerencia_descripcion',
+                    'p.fecha_generada',
+                    'p.aceptado'
+                )
+                ->orderBy('p.fecha_predicha');
+
+            if ($idProducto) {
+                $query->where('p.id_producto', $idProducto);
+            }
+
+            $predicciones = $query->get();
+
+            return response()->json([
+                'predicciones' => $predicciones,
+                'resumen' => [
+                    'total_predicciones' => $predicciones->count(),
+                    'demanda_total' => $predicciones->sum('demanda_prevista'),
+                    'promedio_diario' => $predicciones->avg('demanda_prevista'),
+                    'productos_unicos' => $predicciones->unique('id_producto')->count()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo predicciones: ' . $e->getMessage());
+            return response()->json(['error' => 'Error obteniendo predicciones'], 500);
+        }
+    }
+
+    /**
+     * Obtener sugerencias por tipo
+     */
+    public function getSugerenciasPorTipo(Request $request)
+    {
+        try {
+            $tipo = $request->get('tipo'); // 'stock_critico', 'incrementar_stock', etc.
+            $fechaDesde = now()->format('Y-m-d');
+            $fechaHasta = now()->addDays(30)->format('Y-m-d');
+
+            $query = DB::table('prediccion as p')
+                ->join('producto as pr', 'p.id_producto', '=', 'pr.id_producto')
+                ->where('p.eliminado', 0)
+                ->where('pr.eliminado', 0)
+                ->where('p.aceptado', 0) // Solo no aceptadas
+                ->whereBetween('p.fecha_predicha', [$fechaDesde, $fechaHasta])
+                ->select(
+                    'p.id_prediccion',
+                    'p.id_producto',
+                    'pr.nombre as producto',
+                    'p.tipo_sugerencia',
+                    'p.sugerencia_descripcion',
+                    DB::raw('SUM(p.demanda_prevista) as demanda_total'),
+                    DB::raw('AVG(p.demanda_prevista) as demanda_promedio'),
+                    DB::raw('COUNT(*) as dias_prediccion')
+                )
+                ->groupBy('p.id_producto', 'pr.nombre', 'p.tipo_sugerencia', 'p.id_prediccion', 'p.sugerencia_descripcion');
+
+            if ($tipo) {
+                $query->where('p.tipo_sugerencia', $tipo);
+            }
+
+            $sugerencias = $query->get();
+
+            return response()->json([
+                'sugerencias' => $sugerencias,
+                'tipos_disponibles' => [
+                    'stock_critico' => 'Stock Crítico',
+                    'incrementar_stock' => 'Incrementar Stock',
+                    'mantener_stock' => 'Mantener Stock',
+                    'reducir_stock' => 'Reducir Stock'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo sugerencias: ' . $e->getMessage());
+            return response()->json(['error' => 'Error obteniendo sugerencias'], 500);
+        }
+    }
+
+    /**
+     * Aceptar/rechazar una sugerencia
+     */
+    public function accionSugerencia(Request $request)
+    {
+        try {
+            $request->validate([
+                'id_prediccion' => 'required|integer',
+                'accion' => 'required|in:aceptar,rechazar',
+                'id_usuario' => 'required|integer'
+            ]);
+
+            $aceptado = $request->accion === 'aceptar' ? 1 : 0;
+
+            DB::table('prediccion')
+                ->where('id_prediccion', $request->id_prediccion)
+                ->update([
+                    'aceptado' => $aceptado,
+                    'id_usuario_accion' => $request->id_usuario
+                ]);
+
+            return response()->json([
+                'message' => 'Sugerencia ' . ($aceptado ? 'aceptada' : 'rechazada') . ' correctamente'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error procesando sugerencia: ' . $e->getMessage());
+            return response()->json(['error' => 'Error procesando sugerencia'], 500);
+        }
+    }
+
+    /**
+     * Obtener predicciones mensuales (para gráficos a largo plazo)
+     */
+    public function getPrediccionesMensuales(Request $request)
+    {
+        try {
+            $mesesFuturos = $request->get('meses', 3);
+            $fechaDesde = now()->format('Y-m-d');
+            $fechaHasta = now()->addMonths($mesesFuturos)->format('Y-m-d');
+
+            // Predicciones agrupadas por mes
+            $prediccionesMensuales = DB::table('prediccion as p')
+                ->join('producto as pr', 'p.id_producto', '=', 'pr.id_producto')
+                ->where('p.eliminado', 0)
+                ->where('pr.eliminado', 0)
+                ->whereBetween('p.fecha_predicha', [$fechaDesde, $fechaHasta])
+                ->select(
+                    DB::raw('YEAR(p.fecha_predicha) as año'),
+                    DB::raw('MONTH(p.fecha_predicha) as mes'),
+                    DB::raw('MONTHNAME(p.fecha_predicha) as nombre_mes'),
+                    DB::raw('SUM(p.demanda_prevista) as demanda_total'),
+                    DB::raw('AVG(p.demanda_prevista) as demanda_promedio'),
+                    DB::raw('COUNT(DISTINCT p.id_producto) as productos_activos')
+                )
+                ->groupBy('año', 'mes', 'nombre_mes')
+                ->orderBy('año')
+                ->orderBy('mes')
+                ->get();
+
+            // Top productos por mes
+            $topProductosMensuales = DB::table('prediccion as p')
+                ->join('producto as pr', 'p.id_producto', '=', 'pr.id_producto')
+                ->where('p.eliminado', 0)
+                ->where('pr.eliminado', 0)
+                ->whereBetween('p.fecha_predicha', [$fechaDesde, $fechaHasta])
+                ->select(
+                    DB::raw('YEAR(p.fecha_predicha) as año'),
+                    DB::raw('MONTH(p.fecha_predicha) as mes'),
+                    'pr.nombre as producto',
+                    DB::raw('SUM(p.demanda_prevista) as demanda_total')
+                )
+                ->groupBy('año', 'mes', 'p.id_producto', 'pr.nombre')
+                ->orderBy('demanda_total', 'desc')
+                ->get()
+                ->groupBy(['año', 'mes'])
+                ->map(function ($productosPorMes) {
+                    return $productosPorMes->take(5); // Top 5 por mes
+                });
+
+            return response()->json([
+                'predicciones_mensuales' => $prediccionesMensuales,
+                'top_productos_mensuales' => $topProductosMensuales,
+                'periodo' => [
+                    'desde' => $fechaDesde,
+                    'hasta' => $fechaHasta,
+                    'meses' => $mesesFuturos
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error obteniendo predicciones mensuales: ' . $e->getMessage());
+            return response()->json(['error' => 'Error obteniendo predicciones mensuales'], 500);
+        }
+    }
+
+    /**
+     * Dashboard con datos de la tabla prediccion
+     */
+    public function dashboardPredicciones()
+    {
+        try {
+            $fechaHoy = now()->format('Y-m-d');
+            $fechaProximaSemana = now()->addWeek()->format('Y-m-d');
+            $fechaProximoMes = now()->addMonth()->format('Y-m-d');
+
+            // Métricas principales
+            $metricas = [
+                // Predicciones próxima semana
+                'predicciones_semana' => DB::table('prediccion')
+                    ->where('eliminado', 0)
+                    ->whereBetween('fecha_predicha', [$fechaHoy, $fechaProximaSemana])
+                    ->sum('demanda_prevista'),
+
+                // Productos con alertas críticas
+                'alertas_criticas' => DB::table('prediccion')
+                    ->where('eliminado', 0)
+                    ->where('tipo_sugerencia', 'stock_critico')
+                    ->where('aceptado', 0)
+                    ->whereBetween('fecha_predicha', [$fechaHoy, $fechaProximoMes])
+                    ->count(),
+
+                // Sugerencias pendientes
+                'sugerencias_pendientes' => DB::table('prediccion')
+                    ->where('eliminado', 0)
+                    ->where('aceptado', 0)
+                    ->whereBetween('fecha_predicha', [$fechaHoy, $fechaProximoMes])
+                    ->count(),
+
+                // Producto con mayor demanda prevista
+                'producto_mayor_demanda' => DB::table('prediccion as p')
+                    ->join('producto as pr', 'p.id_producto', '=', 'pr.id_producto')
+                    ->where('p.eliminado', 0)
+                    ->where('pr.eliminado', 0)
+                    ->whereBetween('p.fecha_predicha', [$fechaHoy, $fechaProximoMes])
+                    ->select('pr.nombre', DB::raw('SUM(p.demanda_prevista) as demanda_total'))
+                    ->groupBy('p.id_producto', 'pr.nombre')
+                    ->orderBy('demanda_total', 'desc')
+                    ->first()
+            ];
+
+            // Gráfico de demanda próximos 30 días
+            $demandaDiaria = DB::table('prediccion as p')
+                ->join('producto as pr', 'p.id_producto', '=', 'pr.id_producto')
+                ->where('p.eliminado', 0)
+                ->where('pr.eliminado', 0)
+                ->whereBetween('p.fecha_predicha', [$fechaHoy, now()->addDays(30)->format('Y-m-d')])
+                ->select(
+                    'p.fecha_predicha',
+                    DB::raw('SUM(p.demanda_prevista) as demanda_total')
+                )
+                ->groupBy('p.fecha_predicha')
+                ->orderBy('p.fecha_predicha')
+                ->get();
+
+            // Sugerencias por tipo
+            $sugerenciasPorTipo = DB::table('prediccion')
+                ->where('eliminado', 0)
+                ->where('aceptado', 0)
+                ->whereBetween('fecha_predicha', [$fechaHoy, $fechaProximoMes])
+                ->select(
+                    'tipo_sugerencia',
+                    DB::raw('COUNT(*) as cantidad')
+                )
+                ->groupBy('tipo_sugerencia')
+                ->get();
+
+            return Inertia::render('Admin/DashboardPredicciones', [
+                'metricas' => $metricas,
+                'demanda_diaria' => $demandaDiaria,
+                'sugerencias_por_tipo' => $sugerenciasPorTipo
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error en dashboard predicciones: ' . $e->getMessage());
+            return Inertia::render('Admin/DashboardPredicciones', [
+                'error' => 'Error cargando datos de predicciones'
+            ]);
+        }
     }
 }

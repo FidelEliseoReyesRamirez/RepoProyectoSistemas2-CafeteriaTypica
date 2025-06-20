@@ -12,7 +12,7 @@ use App\Http\Controllers\DashboardController;
 // Rutas para el admin
 Route::middleware(['auth', 'verified', IsAdmin::class])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-    Route::post('admin/generar-prediccion', [DashboardController::class, 'generarPrediccion'])
+    Route::post('/generar-prediccion', [DashboardController::class, 'generarPrediccion'])
         ->name('admin.generar-prediccion');
     Route::get('/export-csv', [DashboardController::class, 'exportCSV'])
         ->name('admin.export-csv');

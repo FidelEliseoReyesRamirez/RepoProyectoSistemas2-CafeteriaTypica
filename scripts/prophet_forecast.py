@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import os
 import sys
 import numpy as np
-
+sys.stdout.reconfigure(encoding='utf-8')
 try:
     print("Iniciando script de predicciones Prophet...")
 
@@ -19,7 +19,13 @@ try:
         database='typica_bd',
         port=3308
     )
+    cursor = conn.cursor()
     print("✓ Conexión exitosa")
+
+    # Limpiar predicciones anteriores (opcional)
+    print("Limpiando predicciones anteriores...")
+    cursor.execute("UPDATE prediccion SET eliminado = 1 WHERE eliminado = 0")
+    conn.commit()
 
     # Feriados Bolivia
     feriados = pd.DataFrame({
@@ -33,7 +39,7 @@ try:
         'upper_window': 1
     })
 
-    # 1. Predicción general (ventas totales por día) - SOLO PEDIDOS PAGADOS (estado_actual = 6)
+    # 1. Predicción general (ventas totales por día) - SOLO PEDIDOS PAGADOS
     print("Consultando datos generales...")
     df_total = pd.read_sql("""
     SELECT DATE(p.fecha_hora_registro) AS ds, SUM(dp.cantidad) AS y
@@ -49,7 +55,9 @@ try:
         print("Generando predicción general...")
         model = Prophet(holidays=feriados)
         model.fit(df_total)
-        future = model.make_future_dataframe(periods=7)
+
+        # MODIFICACIÓN: Predicción a 90 días (3 meses) en lugar de solo 7 días
+        future = model.make_future_dataframe(periods=90)
         forecast = model.predict(future)
         result_total = forecast[['ds', 'yhat']].copy()
         result_total['ds'] = result_total['ds'].dt.strftime('%Y-%m-%d')
@@ -61,9 +69,9 @@ try:
 
         result_total['real'] = result_total['ds'].map(real_values)
         result_total = result_total.replace({np.nan: None})
-        print(f"✓ Predicción general completada: {len(result_total)} registros")
+        print(f"Predicción general completada: {len(result_total)} registros")
     else:
-        print("⚠ Datos insuficientes para predicción general")
+        print("Datos insuficientes para predicción general")
         result_total = pd.DataFrame(columns=['ds', 'yhat', 'real'])
 
     # 2. Predicción por producto con segmentación ABC
@@ -89,14 +97,13 @@ try:
     total_ventas = ventas_por_producto['y'].sum()
     ventas_por_producto['porcentaje'] = (ventas_por_producto['y'] / total_ventas * 100).cumsum()
 
-    # Asignar categorías ABC
     def asignar_categoria(porcentaje):
         if porcentaje <= 70:
-            return 'A'  # Top performers (70% de ventas)
+            return 'A'
         elif porcentaje <= 90:
-            return 'B'  # Medio (20% de ventas)
+            return 'B'
         else:
-            return 'C'  # Bajo (10% de ventas)
+            return 'C'
 
     ventas_por_producto['categoria'] = ventas_por_producto['porcentaje'].apply(asignar_categoria)
     categoria_map = dict(zip(ventas_por_producto['id_producto'], ventas_por_producto['categoria']))
@@ -105,48 +112,94 @@ try:
     productos_unicos = df_prod['id_producto'].unique()
     print(f"Procesando {len(productos_unicos)} productos...")
 
+    # FUNCIÓN PARA GENERAR SUGERENCIAS
+    def generar_sugerencia(prediccion_promedio, categoria, nombre_producto):
+        if prediccion_promedio > 50:
+            if categoria == 'A':
+                return 'stock_critico', f'Producto top: aumentar stock de {nombre_producto} - alta demanda prevista'
+            else:
+                return 'incrementar_stock', f'Aumentar stock de {nombre_producto} - demanda creciente'
+        elif prediccion_promedio > 20:
+            return 'mantener_stock', f'Mantener nivel actual de stock para {nombre_producto}'
+        else:
+            return 'reducir_stock', f'Considerar reducir stock de {nombre_producto} - baja demanda prevista'
+
+    # Lista para acumular inserciones
+    inserciones_prediccion = []
+
     for i, pid in enumerate(productos_unicos):
         try:
             df_p = df_prod[df_prod['id_producto'] == pid][['ds', 'y', 'nombre']].copy()
             nombre_producto = df_p['nombre'].iloc[0]
 
             df_p['ds'] = pd.to_datetime(df_p['ds'])
-            df_p = df_p.groupby('ds')['y'].sum().reset_index()  # Agrupar por fecha
+            df_p = df_p.groupby('ds')['y'].sum().reset_index()
 
             if len(df_p) >= 2:
                 m = Prophet()
                 m.fit(df_p)
-                fut = m.make_future_dataframe(periods=7)
+
+                # MODIFICACIÓN: Predicción a 90 días (3 meses)
+                fut = m.make_future_dataframe(periods=90)
                 pred = m.predict(fut)
 
-                # Obtener solo las predicciones futuras (próximos 7 días)
-                future_predictions = pred.tail(7)[['ds', 'yhat']].copy()
-                future_predictions['ds'] = future_predictions['ds'].dt.strftime('%Y-%m-%d')
-                future_predictions = future_predictions.replace({np.nan: None})
+                # Obtener solo las predicciones futuras (próximos 90 días)
+                future_predictions = pred.tail(90)[['ds', 'yhat']].copy()
 
-                # Agregar información del producto
+                # INSERTAR EN LA TABLA PREDICCION
+                for _, row in future_predictions.iterrows():
+                    fecha_predicha = row['ds'].strftime('%Y-%m-%d')
+                    demanda_prevista = max(0, int(row['yhat']))  # No permitir valores negativos
+
+                    categoria = categoria_map.get(pid, 'C')
+                    tipo_sugerencia, descripcion = generar_sugerencia(demanda_prevista, categoria, nombre_producto)
+
+                    inserciones_prediccion.append((
+                        int(pid),                    # id_producto
+                        fecha_predicha,              # fecha_predicha
+                        demanda_prevista,            # demanda_prevista
+                        tipo_sugerencia,             # tipo_sugerencia
+                        descripcion                  # sugerencia_descripcion
+                    ))
+
+                # Para el JSON (mantener compatibilidad con el dashboard)
                 producto_info = {
                     'id': int(pid),
                     'nombre': nombre_producto,
                     'categoria': categoria_map.get(pid, 'C'),
-                    'prediccion': float(pred.tail(7)['yhat'].mean())  # Promedio de próximos 7 días
+                    'prediccion': float(pred.tail(30)['yhat'].mean())  # Promedio próximos 30 días
                 }
 
-                forecast_productos[int(pid)] = [producto_info]  # Array con un elemento para mantener estructura
+                forecast_productos[int(pid)] = [producto_info]
                 print(f"✓ Producto {nombre_producto} procesado ({i+1}/{len(productos_unicos)})")
             else:
-                print(f"⚠ Producto {pid}: datos insuficientes")
+                print(f"Producto {pid}: datos insuficientes")
 
         except Exception as e:
-            print(f"✗ Error en predicción para producto {pid}: {e}")
+            print(f"Error en predicción para producto {pid}: {e}")
             continue
 
-    print(f"✓ Predicciones por producto completadas: {len(forecast_productos)} productos")
+    # INSERTAR TODAS LAS PREDICCIONES EN LA BASE DE DATOS
+    if inserciones_prediccion:
+        print(f"Insertando {len(inserciones_prediccion)} predicciones en la base de datos...")
+
+        insert_query = """
+        INSERT INTO prediccion (id_producto, fecha_predicha, demanda_prevista, tipo_sugerencia, sugerencia_descripcion)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+
+        # Insertar en lotes de 1000 registros
+        batch_size = 1000
+        for i in range(0, len(inserciones_prediccion), batch_size):
+            batch = inserciones_prediccion[i:i + batch_size]
+            cursor.executemany(insert_query, batch)
+            conn.commit()
+            print(f"Insertado lote {i//batch_size + 1} ({len(batch)} registros)")
+
+        print(f"Todas las predicciones insertadas correctamente")
 
     # 3. Análisis de tendencias
     print("Analizando producto en tendencia...")
-
-    # Comparar último mes vs mes anterior
     fecha_actual = datetime.now()
     inicio_mes_actual = fecha_actual.replace(day=1) - timedelta(days=30)
     inicio_mes_anterior = inicio_mes_actual - timedelta(days=30)
@@ -187,17 +240,14 @@ try:
             'ventas_anteriores': 0
         }
 
-    # 4. Productos estacionales (simulado basado en nombres comunes)
+    # 4. Productos estacionales
     print("Generando alertas estacionales...")
     mes_actual = fecha_actual.month
-
     productos_estacionales = []
 
-    # Obtener productos activos
     productos_query = "SELECT nombre FROM producto WHERE eliminado = 0"
     df_productos = pd.read_sql(productos_query, conn)
 
-    # Definir patrones estacionales
     patrones_estacionales = {
         'helado': {'meses': [11, 12, 1, 2], 'temporada': 'Verano'},
         'chocolate': {'meses': [6, 7, 8], 'temporada': 'Invierno'},
@@ -217,11 +267,10 @@ try:
                 })
                 break
 
-    # 5. Alertas de stock (simulado - necesitarías tabla de inventario real)
+    # 5. Alertas de stock
     print("Generando alertas de stock...")
     alertas_stock = []
 
-    # Simulación basada en productos más vendidos con stock bajo
     stock_query = """
     SELECT pr.nombre, SUM(dp.cantidad) as total_vendido
     FROM pedido p
@@ -238,29 +287,28 @@ try:
     df_stock = pd.read_sql(stock_query, conn)
 
     for _, producto in df_stock.iterrows():
-        # Simulación de stock bajo para productos top
-        stock_actual = max(1, int(producto['total_vendido'] * 0.1))  # 10% del vendido
-        stock_minimo = int(producto['total_vendido'] * 0.2)  # 20% del vendido
+        stock_actual = max(1, int(producto['total_vendido'] * 0.1))
+        stock_minimo = int(producto['total_vendido'] * 0.2)
 
         if stock_actual < stock_minimo:
             alertas_stock.append({
                 'nombre': producto['nombre'],
                 'stock_actual': stock_actual,
                 'stock_minimo': stock_minimo,
-                'dias_restantes': max(1, stock_actual // 2)  # Estimación
+                'dias_restantes': max(1, stock_actual // 2)
             })
 
-    # 6. Guardar resultados
+    # 6. Guardar resultados JSON
     output = {
         'general': result_total.to_dict(orient='records') if len(result_total) > 0 else [],
         'por_producto': forecast_productos,
         'producto_tendencia': tendencia_info,
         'productos_estacionales': productos_estacionales,
         'alertas_stock': alertas_stock,
-        'generado_en': datetime.now().isoformat()
+        'generado_en': datetime.now().isoformat(),
+        'total_predicciones_bd': len(inserciones_prediccion)
     }
 
-    # Crear directorio si no existe
     output_dir = os.path.join(os.path.dirname(__file__), '../storage/app')
     os.makedirs(output_dir, exist_ok=True)
 
@@ -269,38 +317,29 @@ try:
 
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(output, f, indent=2, default=str, ensure_ascii=False)
+        print(" forecast.json guardado exitosamente")
 
-    print("✓ Predicciones guardadas correctamente")
+    # Cerrar conexiones
+    cursor.close()
+    conn.close()
+
+    print("✓ Script completado exitosamente")
     print(f"- Predicción general: {len(result_total)} registros")
     print(f"- Predicciones por producto: {len(forecast_productos)} productos")
+    print(f"- Predicciones insertadas en BD: {len(inserciones_prediccion)}")
     print(f"- Producto en tendencia: {tendencia_info['nombre']} (+{tendencia_info['crecimiento']}%)")
     print(f"- Productos estacionales: {len(productos_estacionales)}")
     print(f"- Alertas de stock: {len(alertas_stock)}")
-    print(f"- Archivo generado: {output_file}")
-
-    # Opcional: Generar también los CSV
-    csv_dir = os.path.join(os.path.dirname(__file__), '../storage/app')
-
-    # Generar predicciones.csv
-    if len(result_total) > 0:
-        predicciones_csv = os.path.join(csv_dir, 'predicciones.csv')
-        result_total.to_csv(predicciones_csv, index=False)
-        print(f"✓ CSV de predicciones generado: {predicciones_csv}")
-
-    # Generar ventas_prophet.csv (datos históricos)
-    if len(df_total) > 0:
-        ventas_csv = os.path.join(csv_dir, 'ventas_prophet.csv')
-        df_total.to_csv(ventas_csv, index=False)
-        print(f"✓ CSV de ventas históricas generado: {ventas_csv}")
-
-    conn.close()
-    print("✓ Script completado exitosamente")
 
 except mysql.connector.Error as e:
-    print(f"✗ Error de base de datos: {e}")
+    print(f"Error de base de datos: {e}")
+    if 'cursor' in locals():
+        cursor.close()
+    if 'conn' in locals():
+        conn.close()
     sys.exit(1)
 except Exception as e:
-    print(f"✗ Error general: {e}")
+    print(f"Error general: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
