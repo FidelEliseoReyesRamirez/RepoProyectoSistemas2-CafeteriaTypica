@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
+
 class ProductoController extends Controller
 {
     public function index()
@@ -114,6 +115,7 @@ class ProductoController extends Controller
 
         return redirect()->route('productos.deleted')->with('success', 'Producto restaurado correctamente.');
     }
+    
 
     private function registrarAuditoria(string $accion, string $descripcion): void
     {
@@ -124,5 +126,43 @@ class ProductoController extends Controller
             'fecha_hora' => now(),
             'eliminado' => 0,
         ]);
+    }
+    public function actualizarCantidad(Request $request, $id)
+    {
+        $request->validate([
+            'cantidad' => 'required|integer|min:0'
+        ]);
+
+        $producto = Producto::findOrFail($id);
+        $cantidadAnterior = $producto->cantidad_disponible;
+        $producto->cantidad_disponible = $request->cantidad;
+        $producto->save();
+
+        $admin = Auth::user()->nombre;
+
+
+        $ultimaAuditoria = Auditorium::where('id_usuario', Auth::id())
+            ->where('accion', 'Actualizar stock de producto')
+            ->where('descripcion', 'like', "%{$producto->nombre}%")
+            ->where('fecha_hora', '>=', now()->subSeconds(5))
+            ->latest('fecha_hora')
+            ->first();
+
+        if ($ultimaAuditoria) {
+
+            preg_match('/de (\d+)/', $ultimaAuditoria->descripcion, $matches);
+            $stockInicial = $matches[1] ?? $cantidadAnterior;
+
+
+            $ultimaAuditoria->update([
+                'descripcion' => "$admin actualizó el stock de {$producto->nombre} de $stockInicial a {$request->cantidad}",
+                'fecha_hora' => now(),
+            ]);
+        } else {
+
+            $this->registrarAuditoria('Actualizar stock de producto', "$admin actualizó el stock de {$producto->nombre} de $cantidadAnterior a {$request->cantidad}");
+        }
+
+        return back();
     }
 }
