@@ -1,10 +1,11 @@
 {
+    "$schema": "https://json.schemastore.org/package.json",
     "private": true,
     "type": "module",
     "scripts": {
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
-        "dev": "vite",
+        "dev": "vite --host 192.168.0.121",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix"
@@ -40,6 +41,7 @@
         "typescript": "^5.2.2",
         "vite": "^6.2.0",
         "vue": "^3.5.13",
+        "vue3-datepicker": "^0.4.0",
         "ziggy-js": "^2.4.2"
     },
     "optionalDependencies": {
