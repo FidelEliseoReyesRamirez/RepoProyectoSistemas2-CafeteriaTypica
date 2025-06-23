@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('producto', function (Blueprint $table) {
+        /*Schema::create('producto', function (Blueprint $table) {
             $table->integer('id_producto', true);
             $table->string('nombre', 100);
             $table->string('descripcion')->nullable();
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('cantidad_disponible')->nullable()->default(0);
             $table->text('imagen')->nullable();
             $table->boolean('eliminado')->nullable()->default(false);
-        });
+        });*/
     }
 
     /**

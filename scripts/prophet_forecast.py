@@ -17,7 +17,7 @@ try:
         user='root',
         password='',
         database='typica_bd',
-        port=3308
+        port=3306
     )
     cursor = conn.cursor()
     print("✓ Conexión exitosa")

@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pedido', function (Blueprint $table) {
+      /*  Schema::create('pedido', function (Blueprint $table) {
             $table->integer('id_pedido', true);
             $table->integer('id_usuario_mesero')->index('idx_pedido_mesero');
             $table->dateTime('fecha_hora_registro')->nullable()->useCurrent();
             $table->integer('estado_actual')->index('idx_pedido_estado');
             $table->boolean('eliminado')->nullable()->default(false);
-        });
+        });*/
     }
 
     /**

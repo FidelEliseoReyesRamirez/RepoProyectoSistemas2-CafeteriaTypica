@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use Illuminate\Http\Request;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Controllers\PedidoController;
+use App\Http\Controllers\DashboardController;
 
 
 // Ruta para Dashboard, solo accesible para admin

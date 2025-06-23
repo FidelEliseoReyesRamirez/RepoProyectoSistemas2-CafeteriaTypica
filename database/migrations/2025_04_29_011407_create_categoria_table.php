@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('categoria', function (Blueprint $table) {
-            $table->integer('id_categoria', true);
-            $table->string('nombre', 100);
-            $table->string('descripcion')->nullable();
-            $table->boolean('eliminado')->nullable()->default(false);
-        });
+        //Schema::create('categoria', function (Blueprint $table) {
+         //   $table->integer('id_categoria', true);
+          //  $table->string('nombre', 100);
+            //$table->string('descripcion')->nullable();
+           // $table->boolean('eliminado')->nullable()->default(false);
+        //});
     }
 
     /**

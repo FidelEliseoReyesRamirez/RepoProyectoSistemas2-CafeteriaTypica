@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('detallepedido', function (Blueprint $table) {
+       /* Schema::create('detallepedido', function (Blueprint $table) {
             $table->integer('id_detalle', true);
             $table->integer('id_pedido');
             $table->integer('id_producto')->index('id_producto');
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->boolean('eliminado')->nullable()->default(false);
 
             $table->index(['id_pedido', 'id_producto'], 'idx_detallepedido');
-        });
+        });*/
     }
 
     /**
