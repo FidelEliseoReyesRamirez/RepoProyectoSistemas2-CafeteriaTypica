@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Log;
+use App\Models\Producto;
+
 
 class DashboardController extends Controller
 {
@@ -45,15 +47,37 @@ class DashboardController extends Controller
             ->join('pedido', 'detallepedido.id_pedido', '=', 'pedido.id_pedido')
             ->where('pedido.eliminado', 0)
             ->where('detallepedido.eliminado', 0)
-            ->where('pedido.estado_actual', 6) // Solo pedidos pagados
+            ->where('pedido.estado_actual', 6)
             ->whereBetween('pedido.fecha_hora_registro', [now()->startOfWeek(), now()])
+            ->sum(DB::raw('detallepedido.cantidad * detallepedido.precio_unitario'));
+
+        $ventasMes = DB::table('detallepedido')
+            ->join('pedido', 'detallepedido.id_pedido', '=', 'pedido.id_pedido')
+            ->where('pedido.eliminado', 0)
+            ->where('detallepedido.eliminado', 0)
+            ->where('pedido.estado_actual', 6)
+            ->whereBetween('pedido.fecha_hora_registro', [now()->startOfMonth(), now()])
+            ->sum(DB::raw('detallepedido.cantidad * detallepedido.precio_unitario'));
+
+        $ventasAño = DB::table('detallepedido')
+            ->join('pedido', 'detallepedido.id_pedido', '=', 'pedido.id_pedido')
+            ->where('pedido.eliminado', 0)
+            ->where('detallepedido.eliminado', 0)
+            ->where('pedido.estado_actual', 6)
+            ->whereYear('pedido.fecha_hora_registro', now()->year)
             ->sum(DB::raw('detallepedido.cantidad * detallepedido.precio_unitario'));
 
         $clientes = DB::table('pedido')
             ->where('eliminado', 0)
-            ->where('estado_actual', 6) // Solo pedidos pagados
+            ->where('estado_actual', 6)
             ->whereBetween('fecha_hora_registro', [now()->startOfWeek(), now()])
             ->count();
+
+        // ALERTAS: productos sin stock
+        $alertasStock = Producto::where('eliminado', false)
+            ->where('cantidad_disponible', '<=', 0)
+            ->get(['nombre', 'cantidad_disponible']);
+
 
 
 
@@ -75,29 +99,33 @@ class DashboardController extends Controller
         $totalDetalles = DB::table('detallepedido')->where('eliminado', 0)->count();
 
         return Inertia::render('Admin/Dashboard', [
-            'forecast'                => $forecast['general'] ?? [],
-            'porProducto'            => $forecast['por_producto'] ?? [],
-            'productoTendencia'      => $forecast['producto_tendencia'] ?? [
+            'forecast' => $forecast['general'] ?? [],
+            'porProducto' => $forecast['por_producto'] ?? [],
+            'productoTendencia' => $forecast['producto_tendencia'] ?? [
                 'nombre' => 'N/A',
                 'crecimiento' => 0,
                 'ventas_actuales' => 0,
                 'ventas_anteriores' => 0
             ],
-            'productosEstacionales'  => $forecast['productos_estacionales'] ?? [],
-            'alertasStock'           => $forecast['alertas_stock'] ?? [],
-            'metrics'                => [
-                'ventasSemana'           => round($ventasSemana, 2),
-                'clientesAtendidos'      => $clientes,
+            
+            'productosEstacionales' => $forecast['productos_estacionales'] ?? [],
+            'alertasStock' => $alertasStock,
+
+            'metrics' => [
+                'ventasSemana' => round($ventasSemana, 2),
+                'ventasMes' => round($ventasMes, 2),
+                'ventasAño' => round($ventasAño, 2),
+                'clientesAtendidos' => $clientes,
             ],
-            'ventasDiarias'          => $ventasPorDia,
-            'topProductos'           => $topProductos,
+            'ventasDiarias' => $ventasPorDia,
+            'topProductos' => $topProductos,
 
             'debug' => [
-                'forecastExists'         => $forecastExists,
-                'totalPedidos'          => $totalPedidos,
-                'totalDetalles'         => $totalDetalles,
-                'forecastGeneralCount'  => count($forecast['general'] ?? []),
-                'forecastProductCount'  => count($forecast['por_producto'] ?? [])
+                'forecastExists' => $forecastExists,
+                'totalPedidos' => $totalPedidos,
+                'totalDetalles' => $totalDetalles,
+                'forecastGeneralCount' => count($forecast['general'] ?? []),
+                'forecastProductCount' => count($forecast['por_producto'] ?? [])
             ]
         ]);
     }
