@@ -21,6 +21,10 @@ const valorVentas = computed(() => {
   if (modo.value === 'mes') return metrics.ventasMes;
   return metrics.ventasAño;
 });
+
+const modoTexto = computed(() => {
+  return modo.value === 'semana' ? 'semana' : modo.value === 'mes' ? 'mes' : 'año';
+});
 </script>
 
 <template>
@@ -30,31 +34,34 @@ const valorVentas = computed(() => {
 
       <div class="rounded-xl border p-4 shadow-sm">
         <h3 class="mb-4 text-lg font-semibold">Ventas Totales</h3>
-        <div class="mb-4 flex gap-2">
-          <button
-            class="rounded-lg border px-3 py-1 text-sm"
-            :class="modo === 'semana' ? 'bg-primary text-white' : 'bg-muted'"
+
+        <!-- Hacer que el div sea más visible y responsivo -->
+        <div class="mb-4 flex flex-wrap gap-2">
+          <div
+            class="flex-1 cursor-pointer p-3 rounded-lg border text-center hover:shadow transition-all duration-150"
+            :class="modo === 'semana' ? 'bg-primary text-white font-semibold' : 'bg-muted'"
             @click="modo = 'semana'"
           >
             Semana
-          </button>
-          <button
-            class="rounded-lg border px-3 py-1 text-sm"
-            :class="modo === 'mes' ? 'bg-primary text-white' : 'bg-muted'"
+          </div>
+          <div
+            class="flex-1 cursor-pointer p-3 rounded-lg border text-center hover:shadow transition-all duration-150"
+            :class="modo === 'mes' ? 'bg-primary text-white font-semibold' : 'bg-muted'"
             @click="modo = 'mes'"
           >
             Mes
-          </button>
-          <button
-            class="rounded-lg border px-3 py-1 text-sm"
-            :class="modo === 'año' ? 'bg-primary text-white' : 'bg-muted'"
+          </div>
+          <div
+            class="flex-1 cursor-pointer p-3 rounded-lg border text-center hover:shadow transition-all duration-150"
+            :class="modo === 'año' ? 'bg-primary text-white font-semibold' : 'bg-muted'"
             @click="modo = 'año'"
           >
             Año
-          </button>
+          </div>
         </div>
+
         <p class="text-3xl font-bold text-primary">Bs. {{ valorVentas.toFixed(2) }}</p>
-        <p class="text-sm text-muted mt-1">Clientes atendidos esta semana: {{ metrics.clientesAtendidos }}</p>
+        <p class="text-sm text-muted mt-1">Clientes atendidos esta {{ modoTexto }}</p>
       </div>
     </div>
   </AppLayout>

@@ -342,7 +342,7 @@ const getPositionClass = (index: number) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-blue-600 mb-1">Ventas Esta Semana</p>
-                            <p class="text-2xl font-bold text-blue-800">${{ formatNumber(metrics.ventasSemana) }}</p>
+                            <p class="text-2xl font-bold text-blue-800">Bs {{ formatNumber(metrics.ventasSemana) }}</p>
                         </div>
                         <TrendingUp
                             class="w-10 h-10 text-blue-500 group-hover:scale-110 transition-transform duration-200" />

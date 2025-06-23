@@ -483,43 +483,47 @@ class PedidoController extends Controller
         ]);
     }
     public function marcarComoPagado(Request $request, $id)
-    {
-        $request->validate([
-            'metodo_pago' => ['required', 'in:Efectivo,Tarjeta,QR'],
-        ]);
+{
+    $request->validate([
+        'metodo_pago' => ['required', 'in:Efectivo,Tarjeta,QR'],
+    ]);
 
-        $pedido = Pedido::with('estadopedido')->findOrFail($id);
+    $pedido = Pedido::with('estadopedido')->findOrFail($id);
 
-        if ($pedido->estadopedido->nombre_estado === 'Pagado') {
-            return response()->json(['error' => 'Este pedido ya ha sido pagado.'], 422);
-        }
-
-        $estadoPagado = Estadopedido::where('nombre_estado', 'Pagado')->firstOrFail();
-
-        DB::transaction(function () use ($pedido, $request, $estadoPagado) {
-            $pedido->estado_actual = $estadoPagado->id_estado;
-            $pedido->save();
-
-            Pago::create([
-                'id_pedido' => $pedido->id_pedido,
-                'monto' => $pedido->detallepedidos->sum(fn($d) => $d->cantidad * $d->precio_unitario),
-                'metodo_pago' => $request->metodo_pago,
-                'fecha_pago' => now(),
-                'eliminado' => false,
-            ]);
-
-            $usuario = Auth::user()->nombre;
-            $descripcion = "$usuario marcó como pagado el pedido #{$pedido->id_pedido} usando {$request->metodo_pago}";
-            $this->registrarAuditoria('Pago de pedido', $descripcion);
-        });
-
-        return response()->json([
-            'nuevo_estado' => [
-                'nombre_estado' => $estadoPagado->nombre_estado,
-                'color_codigo' => $estadoPagado->color_codigo
-            ]
-        ]);
+    if ($pedido->estadopedido->nombre_estado === 'Pagado') {
+        return response()->json(['error' => 'Este pedido ya ha sido pagado.'], 422);
     }
+
+    // 🔥 Solución crítica
+    $pedido->load('detallepedidos');
+
+    $estadoPagado = Estadopedido::where('nombre_estado', 'Pagado')->firstOrFail();
+
+    DB::transaction(function () use ($pedido, $request, $estadoPagado) {
+        $pedido->estado_actual = $estadoPagado->id_estado;
+        $pedido->save();
+
+        Pago::create([
+            'id_pedido' => $pedido->id_pedido,
+            'monto' => $pedido->detallepedidos->sum(fn($d) => $d->cantidad * $d->precio_unitario),
+            'metodo_pago' => $request->metodo_pago,
+            'fecha_pago' => now(),
+            'eliminado' => false,
+        ]);
+
+        $usuario = Auth::user()->nombre;
+        $descripcion = "$usuario marcó como pagado el pedido #{$pedido->id_pedido} usando {$request->metodo_pago}";
+        $this->registrarAuditoria('Pago de pedido', $descripcion);
+    });
+
+    return response()->json([
+        'nuevo_estado' => [
+            'nombre_estado' => $estadoPagado->nombre_estado,
+            'color_codigo' => $estadoPagado->color_codigo
+        ]
+    ]);
+}
+
 
     public function vistaCajero()
     {
