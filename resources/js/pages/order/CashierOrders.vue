@@ -270,8 +270,72 @@ const goToPage = (page: number) => {
           Siguiente
         </button>
       </div>
+<!-- Modal de Resumen del Pedido -->
+<div v-if="showResumen && pedidoSeleccionado"
+     class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-[#2c211b] rounded-lg p-6 shadow-xl w-full max-w-md">
+    <h2 class="text-lg font-bold mb-4">Resumen del Pedido #{{ pedidoSeleccionado.id_pedido }}</h2>
+    <ul class="divide-y divide-[#c5a880] dark:divide-[#8c5c3b] max-h-64 overflow-y-auto mb-4">
+      <li v-for="item in pedidoSeleccionado.detallepedidos" :key="item.id_producto" class="py-2">
+        <div class="flex justify-between">
+          <div>
+            <p class="font-medium">{{ item.producto.nombre }}</p>
+            <p class="text-xs text-gray-500">Cantidad: {{ item.cantidad }}</p>
+            <p v-if="item.comentario" class="text-xs italic mt-1 text-gray-700 dark:text-gray-300">
+              "{{ item.comentario }}"
+            </p>
+          </div>
+          <p class="font-semibold">{{ (item.producto.precio * item.cantidad).toFixed(2) }} Bs</p>
+        </div>
+      </li>
+    </ul>
+    <div class="flex justify-between font-bold border-t pt-2">
+      <p>Total:</p>
+      <p>
+        {{
+          pedidoSeleccionado.detallepedidos
+            .reduce((sum, item) => sum + item.producto.precio * item.cantidad, 0)
+            .toFixed(2)
+        }} Bs
+      </p>
+    </div>
+    <div class="flex justify-end mt-4">
+      <button @click="cerrarResumen"
+              class="px-4 py-2 rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>
 
-      <!-- ... resto de modales igual ... -->
+<!-- Modal de Método de Pago -->
+<div v-if="showPagoModal"
+     class="fixed inset-0 bg-black/30 z-50 flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-[#2c211b] p-6 rounded-lg shadow-xl max-w-sm w-full">
+    <h2 class="text-lg font-semibold mb-4 text-[#593E25] dark:text-[#d9a679]">
+      Selecciona el método de pago
+    </h2>
+    <select v-model="metodoPago"
+            class="border text-black rounded px-3 py-2 w-full mb-4">
+      <option value="">-- Seleccionar --</option>
+      <option value="Efectivo">Efectivo</option>
+      <option value="Tarjeta">Tarjeta</option>
+      <option value="QR">QR</option>
+    </select>
+    <div class="flex justify-end gap-2">
+      <button @click="cerrarPagoModal"
+              class="px-4 py-2 rounded border hover:bg-neutral-100 dark:hover:bg-[#3a2e26]">
+        Cancelar
+      </button>
+      <button @click="marcarComoPagado"
+              class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow">
+        Confirmar pago
+      </button>
+    </div>
+  </div>
+</div>
+
+
 
     </div>
   </AppLayout>
