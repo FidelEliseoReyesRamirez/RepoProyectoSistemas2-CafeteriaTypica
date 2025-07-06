@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use Illuminate\Http\Request;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Controllers\PedidoController;
+use App\Http\Controllers\DashboardController;
 
 
 // Ruta para Dashboard, solo accesible para admin
@@ -110,10 +111,6 @@ Route::get('/api/my-orders', [PedidoController::class, 'myOrdersJson']);
 
 //CONFIGURACIONES
 use App\Http\Controllers\ConfiguracionController;
-
-Route::get('/configuracion', [ConfiguracionController::class, 'index'])->name('config.index');
-Route::post('/configuracion', [ConfiguracionController::class, 'update'])->name('config.update');
-
 
 Route::middleware(['auth', 'is_admin'])->group(function () {
     Route::get('/config', [ConfiguracionController::class, 'index'])->name('config.index');
