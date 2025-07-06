@@ -13,11 +13,11 @@ try:
     # Conexión MySQL
     print("Conectando a la base de datos...")
     conn = mysql.connector.connect(
-        host='127.0.0.1',
-        user='root',
-        password='',
-        database='typica_bd',
-        port=3308
+   host='sql201.infinityfree.com',
+    user='if0_39408277',
+    password='Litoral1352',
+    database='if0_39408277_typica_bd',
+    port=3306
     )
     cursor = conn.cursor()
     print("✓ Conexión exitosa")
