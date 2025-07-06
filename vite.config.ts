@@ -11,10 +11,7 @@ export default defineConfig({
         host: '192.168.0.191',
         port: 5173,
         strictPort: true,
-        cors: {
-            origin: 'http://192.168.0.191:8000',
-            credentials: true,
-        },
+        cors: true,
     },
     plugins: [
         laravel({
