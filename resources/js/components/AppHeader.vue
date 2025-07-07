@@ -21,6 +21,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-vue-next';
 import { computed } from 'vue';
 
+
 interface Props {
     breadcrumbs?: BreadcrumbItem[];
 }
@@ -30,7 +31,12 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const page = usePage();
-const auth = computed(() => page.props.auth);
+import type { User } from '@/types';
+
+const auth = page.props.auth as {
+    user: User;
+};
+
 
 const isCurrentRoute = computed(() => (url: string) => page.url === url);
 
@@ -190,4 +196,5 @@ const rightNavItems: NavItem[] = [
             </div>
         </div>
     </div>
+
 </template>

@@ -6,6 +6,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use App\Http\Middleware\IsAdminOrKitchen;
 
 
 use Inertia\Inertia;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
             'can_manage_productos' => \App\Http\Middleware\CanManageProductos::class,
             'is_mesero_or_admin' => \App\Http\Middleware\IsMeseroOrAdmin::class,
+            'is_admin_or_kitchen' => IsAdminOrKitchen::class,
         ]);
         
     })

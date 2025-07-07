@@ -19,11 +19,11 @@ use Illuminate\Database\Eloquent\Model;
  * @property float $precio_unitario
  * @property bool|null $eliminado
  * 
- * @property Pedido $pedido
- * @property Producto $producto
- *
- * @package App\Models
+ * @property-read \App\Models\Producto $producto
  */
+
+
+
 class Detallepedido extends Model
 {
 	protected $table = 'detallepedido';
@@ -51,7 +51,9 @@ class Detallepedido extends Model
 	{
 		return $this->belongsTo(Pedido::class, 'id_pedido');
 	}
-
+	/**
+	 * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Models\Producto, self>
+	 */
 	public function producto()
 	{
 		return $this->belongsTo(Producto::class, 'id_producto');

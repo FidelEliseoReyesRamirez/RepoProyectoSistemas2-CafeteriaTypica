@@ -36,15 +36,29 @@ const soloLetras = (e: KeyboardEvent) => {
   }
 };
 
+const showError = ref(false)
+
 const submit = () => {
   form.put(`/users/${props.usuario.id_usuario}`, {
     preserveScroll: true,
+    onError: (errors) => {
+      if (errors.rol_protegido) {
+        showError.value = true
+      }
+    }
   });
 };
+
+const cancelarEliminar = () => {
+  showError.value = false;
+};
+
+
 </script>
 
 <template>
   <AppLayout>
+
     <Head title="Edit User" />
 
     <div class="p-4 sm:p-6 text-[#4b3621] dark:text-white">
@@ -55,43 +69,26 @@ const submit = () => {
       </div>
 
       <div
-        class="bg-white dark:bg-[#1d1b16] rounded-xl border border-[#c5a880] dark:border-[#8c5c3b] p-4 sm:p-6 shadow-md max-w-4xl mx-auto w-full"
-      >
+        class="bg-white dark:bg-[#1d1b16] rounded-xl border border-[#c5a880] dark:border-[#8c5c3b] p-4 sm:p-6 shadow-md max-w-4xl mx-auto w-full">
         <form @submit.prevent="submit" class="grid gap-4 sm:gap-6">
           <div>
             <Label for="nombre">Full Name</Label>
-            <Input
-              id="nombre"
-              v-model="form.nombre"
-              type="text"
-              maxlength="100"
-              pattern="^[A-Za-zÀ-ÿ ]+$"
-              title="Only letters and spaces. Max 100 characters."
-              class="mt-1 block w-full"
-              @keypress="soloLetras"
-            />
+            <Input id="nombre" v-model="form.nombre" type="text" maxlength="100" pattern="^[A-Za-zÀ-ÿ ]+$"
+              title="Only letters and spaces. Max 100 characters." class="mt-1 block w-full" @keypress="soloLetras" />
             <InputError :message="form.errors.nombre" />
           </div>
 
           <div>
             <Label for="email">Email</Label>
-            <Input
-              id="email"
-              v-model="form.email"
-              type="email"
-              class="mt-1 block w-full"
-              title="Must be a valid Gmail address."
-            />
+            <Input id="email" v-model="form.email" type="email" class="mt-1 block w-full"
+              title="Must be a valid Gmail address." />
             <InputError :message="form.errors.email" />
           </div>
 
           <div>
             <Label for="id_rol">Role</Label>
-            <select
-              v-model="form.id_rol"
-              id="id_rol"
-              class="mt-1 block w-full border rounded-md px-3 py-2 border-[#c5a880] dark:border-[#8c5c3b] bg-white dark:bg-[#26231d] text-[#4b3621] dark:text-white"
-            >
+            <select v-model="form.id_rol" id="id_rol"
+              class="mt-1 block w-full border rounded-md px-3 py-2 border-[#c5a880] dark:border-[#8c5c3b] bg-white dark:bg-[#26231d] text-[#4b3621] dark:text-white">
               <option value="" disabled>Selecciona un rol</option>
               <option v-for="rol in roles" :key="rol.id_rol" :value="rol.id_rol">
                 {{ rol.nombre }}
@@ -101,10 +98,8 @@ const submit = () => {
           </div>
 
           <div class="flex justify-end">
-            <Button
-              type="submit"
-              class="bg-[#a47148] hover:bg-[#8c5c3b] text-white font-semibold py-2 px-6 rounded-lg shadow"
-            >
+            <Button type="submit"
+              class="bg-[#a47148] hover:bg-[#8c5c3b] text-white font-semibold py-2 px-6 rounded-lg shadow">
               Editar
             </Button>
           </div>
@@ -112,4 +107,17 @@ const submit = () => {
       </div>
     </div>
   </AppLayout>
+  <!-- Modal Error -->
+  <div v-if="showError" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-2 sm:p-4">
+    <div class="bg-white dark:bg-[#2c211b] p-4 sm:p-6 rounded-lg w-full max-w-sm shadow-xl text-xs sm:text-sm">
+      <h2 class="text-base sm:text-lg font-bold mb-3 text-red-700 dark:text-red-400">Acción no permitida</h2>
+      <p class="mb-4">No puedes editar de rol al último administrador.</p>
+      <div class="flex justify-end">
+        <button @click="cancelarEliminar" class="px-3 py-1.5 bg-[#a47148] text-white rounded hover:bg-[#8c5c3b]">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
 </template>
